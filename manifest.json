@@ -32,7 +32,16 @@
     "react-dom": "^19.2.0",
     "recharts": "^3.7.0"
   },
-  "permissions": [],
+  "permissions": [
+    {
+      "category": "network",
+      "functions": [{ "name": "request", "isDeclared": true }],
+      "purpose": "Fetch daily CDI rates from the Banco Central do Brasil SGS API"
+    }
+  ],
+  "network": {
+    "allowedHosts": ["api.bcb.gov.br"]
+  },
   "keywords": ["wealthfolio", "addon"],
   "license": "MIT"
 }

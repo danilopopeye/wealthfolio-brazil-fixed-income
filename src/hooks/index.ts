@@ -1,3 +1,2 @@
-// Export your custom hooks here
-// Example:
-// export { useMyHook } from './useMyHook';
+export { useCdbBalance, useCdiDailyRates } from './useCdbBalance';
+export type { CdbBalanceParams } from './useCdbBalance';
