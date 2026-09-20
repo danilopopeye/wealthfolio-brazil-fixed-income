@@ -54,7 +54,7 @@ Nenhuma afirmação do design pendura apenas em documentação. Os itens que o b
 | D6 | `from < emissão` → clamp; intervalo vazio → 200 com arrays vazios; `from > to` → 400 |
 | D7 | Auth opcional por header `X-API-Key`; nada sensível em URL/log |
 | D8 | Carried do bootstrap: Go + compose, PU base 1.000 na emissão, valor bruto, fuso `America/Sao_Paulo`, stateless quanto a investimentos, sem API paga |
-| D9 | `D = emissão` → PU 1000; `D < emissão` → 400 |
+| D9 | `D = emissão` → PU 1000 (janela vazia, produto neutro); `D < emissão` como data de avaliação explícita → 400 (título não existia) |
 | D10 | Endpoints `/healthz`, `/pu/{SYMBOL}`, `/history/{SYMBOL}?from&to`; contrato JSON conforme item 5 do design |
 | D11 | Histórico com uma linha por dia útil D (ritmo da série, não dia corrido) |
 | D12 | Backfill sob demanda para datas anteriores ao cache; 503 se a fonte falhar e não houver dado |

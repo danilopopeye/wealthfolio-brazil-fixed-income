@@ -70,7 +70,7 @@ Go stdlib (`net/http`), binário único, sem framework `[decisão]`.
 | `GET /history/{SYMBOL}?from=2026-09-01&to=2026-09-20` | `{"symbol":"...","currency":"BRL","from":"...","to":"...","dates":["2026-09-01",...],"prices":[1024.19,...],"estimatedDays":0}` |
 
 - Mapeamento no Wealthfolio (`[código]` 01, itens 5 e 7): `latest` com `pricePath=$.price`, `currencyPath=$.currency`, `datePath=$.date`; `historical` com `pricePath=$.prices[*]`, `datePath=$.dates[*]`, `dateFormat=%Y-%m-%d`, `dateTimezone=America/Sao_Paulo`. Para `format: json` as duas kind percorrem o mesmo extrator (`extract_json_rows` → `rows_to_quotes`, `custom_scraper_provider.rs:346-363`), então o `datePath` funciona também na fonte latest (array de 1 elemento casado por índice) — o quote ganha timestamp real em vez de "agora" `[código]`.
-- Histórico: uma linha por **dia útil D** (não por dia de CDI), de `max(from, emissão)` até `min(to, último dia avaliável)`; `from`/`to` opcionais (default emissão/hoje); `from < emissão` → clamp; `from > to` → `400`; intervalo vazio → `200` com arrays vazios `[decisão]`.
+- Histórico: uma linha por **dia útil D** (não por dia de CDI), de `max(from, emissão)` até `min(to, último dia avaliável)`; `from`/`to` opcionais (default emissão/hoje); `from < emissão` → clamp; `from > to` já no request original → `400`; janela vazia após o clamp (incluindo `to < emissão`) → `200` com arrays vazios `[decisão]`.
 - Autenticação: `X-API-Key` fixa se `API_KEY` configurada (desligada = modo local); o provider custom do Wealthfolio envia headers arbitrários `[código]`, valor guardável com prefixo `__SECRET__` no keyring. Nada sensível em URL ou log `[decisão]` carried.
 - Erros: `400` symbol/date inválidos; `503` CDI insuficiente (janela anterior ao cache com fonte fora); JSON de erro `{"error":"..."}`.
 - Config por env: `LISTEN_ADDR` (default `:8080`), `API_KEY` (opcional), `CACHE_PATH`, `SGS_BASE_URL` (default oficial), `REFRESH_MIN_INTERVAL`, `CARRY_FORWARD_MAX` (K), `HOLIDAYS_PATH`.
@@ -113,7 +113,7 @@ Registrar a atividade de compra na data da ordem (11/09) com `unitPrice` = **PU 
 | D3 | Calendário desacoplado (fins de semana + `holidays.txt`, passado regenerável da série 12) | Derivar n da própria série (frágil ao lag) |
 | D4 | `float64` ponta a ponta, tolerância 1e-6 | decimal/bignum (fixtures fecham em 1e-8 em float64) |
 | D5 | Taxa com exatamente 2 decimais no symbol | Formato livre (ambíguo) |
-| D6 | `from <emissão` → clamp; vazio → 200 | 400 (hostil ao sync do Wealthfolio) |
+| D6 | `from < emissão` → clamp; janela vazia após o clamp (inclusive `to < emissão`) → 200 com arrays vazios; `from > to` já no request → 400 | 400 em pergunta legítima (hostil ao sync do Wealthfolio) |
 | D7 | Auth opcional por `X-API-Key` | Sem auth sempre (feio se exposto) / OAuth (desnecessário) |
 
 ## Pendências para a Fase 3
