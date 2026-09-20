@@ -1,0 +1,20 @@
+services:
+  cdb-api:
+    build: ./api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      CACHE_PATH: /data/cdi.json
+      REFRESH_MIN_INTERVAL: 30m
+      CARRY_FORWARD_MAX: "3"
+      # API_KEY: set to require X-API-Key on /pu and /history
+      # API_KEY: change-me
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

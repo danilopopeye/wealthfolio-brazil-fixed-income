@@ -8,3 +8,8 @@ skills-lock.json
 
 # upstream clone used only for investigation (reference, not part of the addon)
 wealthfolio/
+
+# Go API local artifacts
+cache/
+data/
+api/cdbapi
