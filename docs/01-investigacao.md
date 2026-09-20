@@ -1,6 +1,6 @@
 # 01 — Investigação (Fase 1)
 
-Status: **em andamento**. Última atualização: 20/09/2026.
+Status: **matemática fechada; investigação Wealthfolio concluída no código**. Última atualização: 20/09/2026.
 
 Gate da fase: todos os itens abaixo com evidência `[doc]`, `[código]`, `[fixture]` ou `[decisão]` — nada pode seguir para a Fase 2 marcado `[hipótese]`.
 
@@ -58,18 +58,68 @@ Os PUs reais são brutos (o prefixado bate sem desconto de IR/IOF). Mantido brut
 - Estratégia de cache incremental e comportamento com a fonte fora do ar: Fase 2 (o lag CETIP→SGS do item 4 é insumo direto).
 - Fuso `America/Sao_Paulo` `[decisão]` (carried do bootstrap). Os cálculos validados acima usaram datas locais BR; a API Go deve fixar o fuso explicitamente.
 
-## Wealthfolio (itens 1–10 do bootstrap) — **EM ABERTO**
+## Wealthfolio (itens 1–10 do bootstrap) — investigado no código v3.9.0
 
-Nada investigado ainda na versão instalada. O experimento do addon não responde nenhum destes itens (arquitetura diferente). O código da versão instalada está disponível localmente em `wealthfolio/` (clone do upstream, v3.9.0 — ver `wealthfolio/package.json`). Estado atual:
+Código da versão instalada: clone em `wealthfolio/` (upstream v3.9.0, `wealthfolio/package.json`). Todos os itens abaixo são `[código]` com `arquivo:linha` no clone.
 
-- `[doc]` carried do bootstrap, a re-verificar na versão instalada: placeholders `{SYMBOL}`/`{CURRENCY}`/`{ISIN}`/`{MIC}`/`{TODAY}`/`{FROM}`/`{TO}`/`{DATE:formato}`; somente GET; headers customizados com `__SECRET__` no keyring; symbol override por security na aba Market Data.
-- Pendentes (método: documentação upstream + código da versão instalada — descobrir qual é): formato exato do JSON esperado (item 5), interpretação de `price` (5), combinação `quantity × price` (6), histórico `FROM`/`TO` (7), limitações BRL (8), securities manuais (9), efeito de compra com preço ≠ PU do dia / liquidação D+1 (10), caracteres permitidos e validação do symbol (4).
-- Item 3 (parâmetros além dos placeholders no symbol override): pendente — a hipótese de trabalho continua sendo codificar os parâmetros no symbol (`CDI-104.50-20260713`), validada apenas como *parseável*, não como aceita pelo Wealthfolio `[hipótese]`.
+### 1. Criar e configurar um Custom Market Data Provider
+
+Settings → Market Data → formulário de custom provider (`apps/frontend/src/pages/settings/market-data/custom-provider-form.tsx`, `source-config-panel.tsx`; exemplos prontos em `provider-templates.ts`). Cada provider tem fontes (`sources`) com: `kind` = `latest`|`historical`, `format` = `json`|`html`|`html_table`|`csv`, `url` (template), `pricePath`, `datePath`/`dateFormat`/`dateTimezone`, `currencyPath`, `factor`, `invert`, `locale`, `headers` (JSON), `method`, `body`, `open/high/low/volumePath`, `defaultPrice` — `CustomProviderSource` em `crates/core/src/custom_provider/model.rs:306`. Persistência em `market_data_custom_providers` (`crates/storage-sqlite/src/db/portable.rs:754`). Há botão de teste (chama `test_source`, `crates/core/src/custom_provider/service.rs:127`).
+
+### 2. Placeholders e HTTP
+
+- Suportados (`crates/core/src/custom_provider/model.rs:106-133`): `{SYMBOL}`, `{currency}`, `{CURRENCY}`, `{TODAY}`, `{FROM}`, `{TO}`, `{ISIN}`, `{MIC}`, `{DATE:formato}`, `{FROM:formato}`, `{TO:formato}`, `{TODAY:formato}`. `{FROM}`/`{TO}` default = hoje quando ausentes; date-only aceitam `%Y %m %d`; `{ISIN}` cai para o symbol; `{MIC}` cai para vazio.
+- **Métodos GET e POST** (`model.rs:13-26`, `VALID_HTTP_METHODS`) — **corrige o `[doc]` "somente GET"** do bootstrap. POST com body templated e `Content-Type: application/json` automático.
+- URLs http/https quaisquer, inclusive rede privada (`validate_url`, `model.rs:190-212`); browser-like User-Agent; resposta máx. 10 MB.
+- Rate limit do provider custom: 30 req/min, concorrência 2, delay mín. 500 ms (`crates/core/src/quotes/custom_scraper_provider.rs:465-471`); 1 retry em 5xx/erro de rede (`:112-166`).
+
+### 3. Symbol override por security e parâmetros extras
+
+- A aba Market Data do asset grava `provider_config` com `preferred_provider: "CUSTOM_SCRAPER"` + `custom_provider_code` (`crates/core/src/assets/assets_model.rs:746-750`; UI seleciona `CUSTOM:<id>`, `asset-edit-sheet.tsx:507`).
+- Override de symbol por provider: `provider_config.overrides["CUSTOM:<code>"].symbol`, resolvido em runtime por `resolve_symbol` (`custom_scraper_provider.rs:685-697`). O schema do override é `z.object({ provider: z.string(), symbol: z.string() })` — **sem restrição de charset** (`asset-edit-sheet.tsx:78-81`).
+- Parâmetros além dos placeholders **não existem** — a rota é codificá-los no symbol do override, como planejado no bootstrap. Com `custom_provider_code` setado a fonte nem precisa de `{SYMBOL}` na URL (`find_sources`, `:635-658`), mas o normal é usar `{SYMBOL}` para diferenciar assets.
+
+### 4. Caracteres permitidos e validação do symbol
+
+Dois níveis:
+
+- **Symbol canônico** (atividades/import): `/^(?=.{1,100}$)(CASH:[A-Z]{3}|[A-Z0-9_]+([.-][A-Z0-9_]+){0,2})$/` (`apps/frontend/src/lib/schemas.ts:181-184`) — maiúsculas/números/`_`, **máx. 2 separadores** `.`/`-`. `CDI-104.50-20260713` **reprova** (3 separadores); `CDI-10450-20260713` passa. Criação manual pela UI só faz trim+uppercase, sem regex (`components/symbol-selector-mobile.tsx:136-142`).
+- **Symbol do override**: livre (`z.string()`, item 3).
+
+Consequência para o design (Fase 2): symbol canônico limpo (ex. `CDB-BANCOB-1430`) + override carregando o symbol parametrizado completo (`CDI-104.50-20260713`).
+
+### 5. Formato JSON esperado e interpretação do price
+
+- `latest`: um valor via JSONPath em `pricePath` — número JSON ou **string parseada com locale** (`parse_number_string` aceita `R$ 1.023,61` com locale pt → convenção europeia; `custom_provider/service.rs:902`, testes `:1354`, `:1362`). Moeda opcional via `currencyPath` (fallback: `quote_ccy` do asset). Transformações `factor` e `invert` (`custom_scraper_provider.rs:727-735`).
+- `historical`: `pricePath` → array de preços; `datePath` → array de datas **casado por índice**; idem open/high/low/volume (`extract_json_rows`, `:1069-1158`); máx. 10.000 linhas. Datas `%Y-%m-%d` nativas ou `dateFormat` explícito; `dateTimezone` aceita `America/Sao_Paulo` (conversão ao meio-dia local, `:759-789`). Linha sem data → timestamp = agora.
+- Um contrato JSON mínimo viável: `{ "dates": [...], "prices": [...] }` com `pricePath=$.prices[*]`, `datePath=$.dates[*]`.
+
+### 6. Como quantity e price viram valor da posição
+
+`market_value = preço × quantity × contract_multiplier` com FX `quote_ccy` → moeda local/base (`crates/core/src/portfolio/holdings/holdings_valuation_service.rs:311-312,526`; `current_account_valuation.rs:454-457`). Para `AssetKind::Investment`, `quantity` vem dos lots de atividades. Preço sem minor-unit normalization automática por moeda (`normalize_amount`).
+
+### 7. Histórico (FROM/TO)
+
+Provider custom declara `supports_historical` (`custom_scraper_provider.rs:446-463`); `get_historical_quotes(start, end)` chama a fonte `historical` com `{FROM}`/`{TO}` em `%Y-%m-%d` (`:534-560`). Fallbacks: fonte `latest` devolve 1 ponto; e "latest" sem fonte própria busca histórico dos últimos 90 dias e pega o timestamp máximo (`:188-252`). Reset de histórico indisponível para custom providers (`quotes/client.rs:407-413`).
+
+### 8. Limitações para BRL
+
+Nenhuma restrição encontrada `[código]`: `quote_ccy` é string livre no asset (`BRL` ok, `assets_model.rs:310`); FX para moeda de exibição via `get_fx_rate_or_fallback` (`holdings_valuation_service.rs:314`); default `USD` só quando não há hint (o hint vem do asset). Valores como strings `R$ 1.023,61` são parseáveis com locale (item 5). Validação em runtime com BRL fica para a Fase 5.
+
+### 9. Securities manuais/customizadas
+
+- `QuoteMode::Market|Manual` (`assets_model.rs:60-64`): Manual = preços digitados; para CDB usamos **Market** + custom provider.
+- Criação manual: trim+uppercase, exchange `MANUAL`, tipos EQUITY/CRYPTO/OTHER na UI (`symbol-selector-mobile.tsx:74-146`).
+- **`InstrumentType::Bond` roteia para `ProviderInstrument::BondIsin`, que o custom provider rejeita** ("Unexpected instrument type", `custom_scraper_provider.rs:473-484`; mapeamento em `assets_service.rs:788-800`). Equity ou sem tipo → `EquitySymbol`, aceito. O asset Bond tem campos de maturity/coupon (`asset-bond-spec.ts`), mas é incompatível com o custom provider — **CDB deve ser `Equity` (ou sem tipo) com `quote_ccy` BRL**.
+
+### 10. Compra com preço diferente do PU do dia (D+1)
+
+Custo vem das atividades: `amount = quantity × unit_price` (`activities_service.rs:6922-6926`), acumulado em lots com custo por unidade na quote_ccy (`lots/mod.rs:262-268`); ganho não realizado = market_value − cost_basis (`holdings_valuation_service.rs:541-546` para alternativos; lot-tracked análogo). Registrar a compra de 11/09 com o preço efetivamente pago (= PU de 14/09) produz custo e ganho corretos com o PU corrente — o mecanismo no Wealthfolio é `[código]`; a liquidação D+1 em si permanece `[hipótese]` (institucional).
 
 ## Outros itens carried
 
-- Liquidação D+1 da compra (preço pago em 11/09 = PU de 14/09 nos dois títulos): `[hipótese]` — relacionado ao item 10 acima.
 - Tolerância 1e-6 por PU: mantida `[decisão]`; as quatro leituras fecham com folga de uma a duas ordens de magnitude.
+- Cross-check do acumulado 2024 (fechado em 20/09/2026): produto da série 12 = **10,8760%**; produto da série 4391 (acumulado mensal oficial, 12 meses truncados em 2 casas) = **10,8881%** — diferença de 0,012pp, consistente com o ruído das truncagens. A série 4392 não é acumulado-no-ano (nem YTD nem 12m rolante) e foi descartada para este fim.
 
 ## Status do código TS (experimento congelado) — `[decisão]`
 
@@ -81,6 +131,6 @@ Nada investigado ainda na versão instalada. O experimento do addon não respond
 ## Próximos passos
 
 1. Re-executar `scripts/check-cdi.mjs` após a série 12 publicar 18/09/2026 → promover o CDI retro-inferido a `[fixture]` e remover o backfill do harness.
-2. Cross-check do acumulado 2024 (10,8760%) contra fonte oficial (CETIP/BCB).
-3. Investigar os itens 1–10 do Wealthfolio na versão instalada (código já clonado em `wealthfolio/`, v3.9.0) — maior bloco em aberto da fase.
-4. Fechados os itens acima, seguir para `docs/02-design.md` (Fase 2).
+2. Itens residuais de evidência: nenhuma hipótese bloqueante resta na matemática; no lado Wealthfolio, a validação em runtime com BRL (item 8) e o fluxo completo de cadastro ficam para a Fase 5 (roteiro manual).
+3. Seguir para `docs/02-design.md` (Fase 2) — insumos principais: contrato JSON mínimo (`{"dates":[...],"prices":[...]}`), symbol canônico limpo + override parametrizado, asset `Equity` + `quote_ccy` BRL + `CUSTOM:<code>`, e a decisão sobre derivar dias úteis da própria série 12.
+4. Gate da Fase 3 (`docs/03-validacao.md`) antes de qualquer código Go.
