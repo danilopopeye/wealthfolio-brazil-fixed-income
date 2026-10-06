@@ -146,6 +146,15 @@ func (c *Calendar) NextBusinessDay(d time.Time) time.Time {
 	return c.FirstBusinessDayOnOrAfter(d.AddDate(0, 0, 1))
 }
 
+// PrevBusinessDay returns the last business day strictly before d.
+func (c *Calendar) PrevBusinessDay(d time.Time) time.Time {
+	t := d.AddDate(0, 0, -1)
+	for !c.IsBusinessDay(t) {
+		t = t.AddDate(0, 0, -1)
+	}
+	return t
+}
+
 // BusinessDaysBetween counts business days in [a, b).
 func (c *Calendar) BusinessDaysBetween(a, b time.Time) int {
 	if !b.After(a) {

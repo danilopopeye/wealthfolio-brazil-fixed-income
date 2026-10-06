@@ -53,6 +53,7 @@ Os PUs reais são brutos (o prefixado bate sem desconto de IR/IOF). Mantido brut
 
 - **Série 12 do SGS ("Taxa de juros - CDI", diária)**: `https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=DD/MM/YYYY&dataFinal=DD/MM/YYYY`. Pública, sem autenticação, GET, JSON. Retorna **apenas dias úteis** com valor publicado; `valor` é string com ponto decimal em % a.d. Exemplos reais: 14–16/09/2026 = `0.051660`; 17/09/2026 = `0.050788`.
 - Sanidade de acumulação: produto direto da série em 2024 = **10,8760%** (253 dias úteis). Série 4391 (CDI acumulado no mês) bate por cima: set/2026 = 0,62% vs 0,6156% calculado pela série 12 (truncamento). Cross-check contra número oficial do acumulado 2024: pendente `[hipótese]`.
+- **Limite de janela**: a API rejeita consultas acima de 10 anos em séries diárias — HTTP 406 "aceita uma janela de consulta de, no máximo, 10 anos" (observado em 06/10/2026). Fetch longo precisa ser fatiado `[fixture]`. Latência errática na prática (0,3–18 s para janelas plausíveis) `[fixture]`.
 - Variante útil: `.../dados/ultimos/N?formato=json`.
 - Limites de requisição/rate limit: não testado `[hipótese]`.
 - Estratégia de cache incremental e comportamento com a fonte fora do ar: Fase 2 (o lag CETIP→SGS do item 4 é insumo direto).

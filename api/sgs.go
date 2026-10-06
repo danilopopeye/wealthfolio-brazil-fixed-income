@@ -40,6 +40,27 @@ type sgsRow struct {
 }
 
 func (f *SGSFetcher) FetchCDI(ctx context.Context, from, to time.Time) ([]Rate, error) {
+	// The SGS API rejects windows longer than 10 years for daily series
+	// (HTTP 406 "janela de consulta de, no máximo, 10 anos"), so long
+	// backfills are fetched in 9-year chunks.
+	var all []Rate
+	segFrom := from
+	for !segFrom.After(to) {
+		segTo := to
+		if limit := segFrom.AddDate(9, 0, 0); limit.Before(segTo) {
+			segTo = limit
+		}
+		rates, err := f.fetchRange(ctx, segFrom, segTo)
+		if err != nil {
+			return all, err // partial results: caller keeps what arrived
+		}
+		all = append(all, rates...)
+		segFrom = segTo.AddDate(0, 0, 1)
+	}
+	return all, nil
+}
+
+func (f *SGSFetcher) fetchRange(ctx context.Context, from, to time.Time) ([]Rate, error) {
 	url := fmt.Sprintf(
 		"%s/dados?formato=json&dataInicial=%02d/%02d/%04d&dataFinal=%02d/%02d/%04d",
 		f.baseURL, from.Day(), int(from.Month()), from.Year(),

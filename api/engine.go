@@ -85,6 +85,7 @@ func (e *Engine) SourceState() SourceState {
 // computation proceeds with the cache and surfaces the shortfall (503 via
 // ErrNoRates) only if data is actually missing (design items 1 and D12).
 func (e *Engine) ensureRates(ctx context.Context, needFrom time.Time) {
+	_ = ctx // fetches are detached; kept in the signature for future use
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -108,7 +109,19 @@ func (e *Engine) ensureRates(ctx context.Context, needFrom time.Time) {
 		return
 	}
 	e.lastAt = now
-	rates, err := e.fetcher.FetchCDI(ctx, from, e.Today())
+	// Detached from the caller's request: a cold-cache backfill can take
+	// tens of seconds against the SGS (observed 18s+), longer than the
+	// Wealthfolio provider's own 15s timeout — the fetch must survive the
+	// client giving up, so the next sync finds a warm cache.
+	fetchCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	rates, err := e.fetcher.FetchCDI(fetchCtx, from, e.Today())
+	if len(rates) > 0 {
+		e.store.Merge(rates) // keep partial progress even on failure
+		if saveErr := e.store.Save(); saveErr != nil {
+			e.logger.Error("saving CDI cache failed", "error", saveErr)
+		}
+	}
 	if err != nil {
 		e.lastOK = false
 		e.lastErr = err.Error()
@@ -117,7 +130,6 @@ func (e *Engine) ensureRates(ctx context.Context, needFrom time.Time) {
 	}
 	e.lastOK = true
 	e.lastErr = ""
-	e.store.Merge(rates)
 	e.store.MarkFetched(now)
 	if err := e.store.Save(); err != nil {
 		e.logger.Error("saving CDI cache failed", "error", err)
@@ -174,6 +186,78 @@ func (e *Engine) postFixed(ctx context.Context, sym Symbol, d time.Time) (PUResu
 		factor *= math.Pow(1+(sym.RatePct/100)*(lastRate/100), float64(gap))
 	}
 	return PUResult{Price: 1000 * factor, EstimatedDays: gap}, nil
+}
+
+// EmissionSolve is the result of reverse-engineering the emission date
+// from a known purchase PU.
+type EmissionSolve struct {
+	Emission time.Time
+	PU       float64
+	Diff     float64 // computed PU minus target (signed)
+}
+
+const solveLookbackYears = 15
+
+// SolveEmission finds the emission date whose PU at the settlement date
+// matches targetPU. For people who buy existing titles, banks disclose the
+// PU paid (or the quantity of titles) but rarely the emission date; since
+// PU is monotone in the emission, it can be inverted against the CDI series
+// (post-fixed) or the calendar (pre-fixed).
+func (e *Engine) SolveEmission(ctx context.Context, kind SymbolKind, ratePct, targetPU float64, settlement time.Time) (EmissionSolve, error) {
+	if !(targetPU >= 1000) {
+		return EmissionSolve{}, errors.New("target PU is below the 1000.00 emission base")
+	}
+	if targetPU == 1000 {
+		return EmissionSolve{Emission: settlement, PU: 1000, Diff: 0}, nil
+	}
+
+	if kind == KindPRE {
+		// PU = 1000*(1+r)^(n/252) -> n* = 252*ln(PU/1000)/ln(1+r)
+		nStar := 252 * math.Log(targetPU/1000) / math.Log(1+ratePct/100)
+		n := int(math.Round(nStar))
+		em := settlement
+		for i := 0; i < n; i++ {
+			em = e.cal.PrevBusinessDay(em)
+		}
+		pu := 1000 * math.Pow(1+ratePct/100, float64(n)/252)
+		return EmissionSolve{Emission: em, PU: pu, Diff: pu - targetPU}, nil
+	}
+
+	// Post-fixed: walk the emission back one business day at a time,
+	// multiplying each crossed day's factor into the running product.
+	limit := settlement.AddDate(-solveLookbackYears, 0, 0)
+	e.ensureRates(ctx, limit)
+
+	em := settlement
+	factor := 1.0
+	best := EmissionSolve{Emission: em, PU: 1000, Diff: 1000 - targetPU}
+	for i := 0; i < 4000; i++ {
+		next := e.cal.PrevBusinessDay(em)
+		v, ok := e.store.Get(next)
+		if !ok {
+			if best.PU <= 1000 {
+				return EmissionSolve{}, ErrNoRates
+			}
+			break // ran out of cached history; return best found
+		}
+		factor *= 1 + (ratePct/100)*(v/100)
+		em = next
+		pu := 1000 * factor
+		if diff := pu - targetPU; abs(diff) < abs(best.Diff) {
+			best = EmissionSolve{Emission: em, PU: pu, Diff: diff}
+		}
+		if pu >= targetPU || em.Before(limit) {
+			break
+		}
+	}
+	return best, nil
+}
+
+func abs(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
 
 // History returns one row per business day D in [from, to] (inclusive),

@@ -86,7 +86,7 @@ func main() {
 		os.Exit(1)
 	}
 	store := LoadRateStore(cfg.CachePath)
-	fetcher := NewSGSFetcher(cfg.SGSBaseURL, 5*time.Second)
+	fetcher := NewSGSFetcher(cfg.SGSBaseURL, 60*time.Second)
 	engine := NewEngine(store, cal, fetcher, EngineConfig{
 		CarryMax:        cfg.CarryMax,
 		RefreshInterval: cfg.RefreshInterval,
@@ -136,7 +136,7 @@ func runHolidaysCheck(fromStr, toStr string) int {
 		fmt.Fprintln(os.Stderr, "calendar:", err)
 		return 2
 	}
-	fetcher := NewSGSFetcher("", 10*time.Second)
+	fetcher := NewSGSFetcher("", 60*time.Second)
 	rates, err := fetcher.FetchCDI(context.Background(), from, to)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "fetch:", err)

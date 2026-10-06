@@ -36,10 +36,13 @@ Configuração por env:
 
 ```
 GET /healthz
-GET /                            → assistente de cadastro (calculadora de symbol/PU/quantidade)
+GET /                            → assistente de cadastro (calculadora de symbol/emissão/PU/quantidade)
 GET /pu/{SYMBOL}                  → {"symbol","date","price","currency","estimatedDays"}
 GET /history/{SYMBOL}?from=&to=   → {"symbol","currency","from","to","dates":[],"prices":[],"estimatedDays"}
+GET /solve/emission?kind=&rate=&pu=&settlement= → descobre a data de emissão a partir do PU pago
 ```
+
+Notas de comportamento da fonte: a API do SGS rejeita janelas acima de 10 anos em séries diárias (HTTP 406, observado em 06/10/2026) — o cliente fatia em blocos de 9 anos — e a latência é errática (0,3 s a 18 s para a mesma janela). Por isso o backfill roda desacoplado do request (context próprio, timeout generoso): se o provider do Wealthfolio (15 s) desistir de uma chamada com cache frio, o backfill continua e o sync seguinte encontra o cache quente. O progresso parcial por bloco é persistido mesmo em caso de falha.
 
 Saída real de 20/09/2026 (fonte pública ainda sem o CDI de 18/09 — carry-forward atuando):
 
@@ -96,7 +99,8 @@ O `holidays-check` é a ferramenta de manutenção do calendário (design D3): i
 | `api/sgs.go` | cliente da série 12 (fetch incremental, 1 retry) |
 | `api/cache.go` | cache JSON atômico (D1) |
 | `api/engine.go` | PU, carry-forward (D2), janela `[emissão, D)` |
-| `api/server.go` | HTTP, `X-API-Key`, clamps do histórico (D6) |
+| `api/server.go` | HTTP, `X-API-Key`, clamps do histórico (D6), `/solve/emission` |
+| `api/wizard.go` + `static/index.html` | assistente de cadastro em `/` (embutido no binário) |
 | `api/main.go` | env, wiring, graceful shutdown, subcommand `holidays-check` |
 
 ## Pendências herdadas

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -36,8 +37,10 @@ func NewServer(engine *Engine, apiKey string, logger *slog.Logger) *Server {
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.handleHealth)
+	registerWizard(mux)
 	mux.Handle("GET /pu/{symbol}", s.auth(http.HandlerFunc(s.handlePU)))
 	mux.Handle("GET /history/{symbol}", s.auth(http.HandlerFunc(s.handleHistory)))
+	mux.Handle("GET /solve/emission", s.auth(http.HandlerFunc(s.handleSolveEmission)))
 	return s.logMiddleware(mux)
 }
 
@@ -146,6 +149,60 @@ func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
 }
 
 // --- helpers ----------------------------------------------------------------
+
+func (s *Server) handleSolveEmission(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	kindStr := q.Get("kind")
+	if kindStr != string(KindCDI) && kindStr != string(KindPRE) {
+		writeError(w, http.StatusBadRequest, "'kind' must be CDI or PRE")
+		return
+	}
+	rate, err := strconv.ParseFloat(q.Get("rate"), 64)
+	if err != nil || rate <= 0 || rate > 999.99 {
+		writeError(w, http.StatusBadRequest, "invalid 'rate'")
+		return
+	}
+	pu, err := strconv.ParseFloat(q.Get("pu"), 64)
+	if err != nil || pu <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid 'pu'")
+		return
+	}
+	settlement, err := time.Parse("2006-01-02", q.Get("settlement"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid 'settlement' (want YYYY-MM-DD)")
+		return
+	}
+	if settlement.After(s.engine.Today()) {
+		writeError(w, http.StatusBadRequest, "'settlement' in the future")
+		return
+	}
+
+	res, err := s.engine.SolveEmission(r.Context(), SymbolKind(kindStr), rate, pu, settlement)
+	if err != nil {
+		if errors.Is(err, ErrNoRates) {
+			writeError(w, http.StatusServiceUnavailable, err.Error())
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	match := "poor"
+	if abs(res.Diff) < 0.005 {
+		match = "exact"
+	} else if abs(res.Diff) < 1 {
+		match = "good"
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"kind":       kindStr,
+		"rate":       rate,
+		"settlement": settlement.Format("2006-01-02"),
+		"targetPu":   pu,
+		"emission":   res.Emission.Format("2006-01-02"),
+		"pu":         res.PU,
+		"diff":       res.Diff,
+		"match":      match,
+	})
+}
 
 func (s *Server) parseSymbol(w http.ResponseWriter, r *http.Request) (Symbol, bool) {
 	raw := strings.TrimSpace(r.PathValue("symbol"))
