@@ -82,6 +82,8 @@ Notas:
 
 Exemplo com R$ 5.000,00 em cada: Banco A `4.88191`, Banco B `4.88480`. O custo fica nos lots; o ganho sairá contra o PU corrente.
 
+**Achar o PU pago de qualquer compra sem terminal**: abra o assistente em `http://localhost:8080` (servido pela própria API) — dados do título, data da compra e valor aplicado retornam o PU do dia útil seguinte (liquidação D+1), a quantidade de títulos e o checklist do que preencher no Wealthfolio, com botões de copiar.
+
 ## 4. Critérios de aceite
 
 1. Preço atual do asset: Banco A ≈ `1026.95`, Banco B ≈ `1026.33` (domingo 20/09 — PU do próximo dia útil).

@@ -36,8 +36,9 @@ Configuração por env:
 
 ```
 GET /healthz
-GET /pu/{SYMBOL}                          → {"symbol","date","price","currency","estimatedDays"}
-GET /history/{SYMBOL}?from=&to=           → {"symbol","currency","from","to","dates":[],"prices":[],"estimatedDays"}
+GET /                            → assistente de cadastro (calculadora de symbol/PU/quantidade)
+GET /pu/{SYMBOL}                  → {"symbol","date","price","currency","estimatedDays"}
+GET /history/{SYMBOL}?from=&to=   → {"symbol","currency","from","to","dates":[],"prices":[],"estimatedDays"}
 ```
 
 Saída real de 20/09/2026 (fonte pública ainda sem o CDI de 18/09 — carry-forward atuando):
