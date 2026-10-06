@@ -109,3 +109,43 @@ Exemplo com R$ 5.000,00 em cada: Banco A `4.88191`, Banco B `4.88480`. O custo f
 - [ ] Compras registradas com unitPrice = PU de liquidação
 - [ ] Posições batendo com os valores esperados
 - [ ] Resgate futuro: registrar SELL na data de vencimento pelo PU final (mesma mecânica)
+
+## Apêndice A — Rodando o Wealthfolio local (upstream v3.9.0)
+
+O clone de referência está em `wealthfolio/`. Três modos, todos com banco novo e vazio (os cadastros deste roteiro valem para o banco do modo escolhido):
+
+**A. Web mode (browser + backend Axum; recomendado para o teste):**
+
+```bash
+cd wealthfolio
+pnpm install
+cp .env.web.example .env.web
+pnpm run dev:web          # http://localhost:1420
+```
+
+Se o backend reclamar de `WF_SECRET_KEY`: `openssl rand -base64 32` no `.env.web`.
+
+**B. Desktop (Tauri):**
+
+```bash
+cd wealthfolio
+cp .env.example .env      # DATABASE_URL=../db/wealthfolio.db
+pnpm tauri dev             # primeira compilação Rust é longa
+```
+
+**C. Docker dev (sem Rust local):**
+
+```bash
+cd wealthfolio
+printf 'WF_SECRET_KEY=%s\n' "$(openssl rand -base64 32)" > .env.docker
+docker compose --env-file .env.docker -f compose.yml -f compose.dev.yml up
+# http://localhost:8088
+```
+
+**Endereço da cdb-api nas fontes do provider, por modo:**
+
+| Modo | URL da fonte |
+|---|---|
+| A (web local) / B (tauri) | `http://localhost:8080/...` |
+| C (docker) | `http://host.docker.internal:8080/...` (container não resolve `localhost` do host) |
+| App instalado (desktop) | `http://localhost:8080/...` |
