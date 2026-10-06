@@ -50,7 +50,7 @@ Nenhuma afirmação do design pendura apenas em documentação. Os itens que o b
 | D2 | Carry-forward da última taxa ≤ K dias úteis (default 3) no fim da série, com `estimatedDays`; nunca no meio da série |
 | D3 | Calendário de dias úteis desacoplado da série: fins de semana + `holidays.txt` (passado regenerável por diff da série 12; futuro mantido manualmente) |
 | D4 | Aritmética `float64`; tolerância de aceite 1e-6 por PU |
-| D5 | Symbol `^(CDI\|PRE)-\d{1,3}\.\d{2}-\d{8}$` no override; canônico limpo no asset |
+| D5 | Symbol `^(CDI\|PRE)-\d{1,3}(\.\d{2})?-\d{8}$` no override; inteiros aceitos (emenda Fase 5 após fricção real); canônico limpo no asset |
 | D6 | `from < emissão` → clamp; intervalo vazio → 200 com arrays vazios; `from > to` → 400 |
 | D7 | Auth opcional por header `X-API-Key`; nada sensível em URL/log |
 | D8 | Carried do bootstrap: Go + compose, PU base 1.000 na emissão, valor bruto, fuso `America/Sao_Paulo`, stateless quanto a investimentos, sem API paga |

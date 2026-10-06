@@ -28,8 +28,20 @@ func TestParseSymbolValid(t *testing.T) {
 		t.Errorf("got %v %v", sym.Kind, sym.RatePct)
 	}
 
+	// Integer rates are accepted (Fase 5 relaxation) and mean .00.
+	sym, err = ParseSymbol("CDI-100-20251226", today2026)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sym.RatePct != 100 {
+		t.Errorf("integer rate = %v, want 100", sym.RatePct)
+	}
+
 	if _, err := ParseSymbol("PRE-999.99-20200101", today2026); err != nil {
 		t.Errorf("edge max rate rejected: %v", err)
+	}
+	if _, err := ParseSymbol("PRE-7-20200101", today2026); err != nil {
+		t.Errorf("single-digit integer rate rejected: %v", err)
 	}
 }
 

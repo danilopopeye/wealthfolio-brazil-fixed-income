@@ -112,7 +112,7 @@ Registrar a atividade de compra na data da ordem (11/09) com `unitPrice` = **PU 
 | D2 | Carry-forward ≤ K dias no fim da série, com `estimatedDays` | Recusar cálculo (quebraria o PU de fim de semana exibido pelos apps) |
 | D3 | Calendário desacoplado (fins de semana + `holidays.txt`, passado regenerável da série 12) | Derivar n da própria série (frágil ao lag) |
 | D4 | `float64` ponta a ponta, tolerância 1e-6 | decimal/bignum (fixtures fecham em 1e-8 em float64) |
-| D5 | Taxa com exatamente 2 decimais no symbol | Formato livre (ambíguo) |
+| D5 | Taxa como inteiro ou exatamente 2 decimais no symbol — emenda Fase 5 (`CDI-100-20251226` é inequívoco) | Formato livre (ambíguo); 2 decimais incondicionais (fricção de uso real) |
 | D6 | `from < emissão` → clamp; janela vazia após o clamp (inclusive `to < emissão`) → 200 com arrays vazios; `from > to` já no request → 400 | 400 em pergunta legítima (hostil ao sync do Wealthfolio) |
 | D7 | Auth opcional por `X-API-Key` | Sem auth sempre (feio se exposto) / OAuth (desnecessário) |
 
