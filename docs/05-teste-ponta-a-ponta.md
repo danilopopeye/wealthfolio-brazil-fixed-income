@@ -100,6 +100,7 @@ Exemplo com R$ 5.000,00 em cada: Banco A `4.88191`, Banco B `4.88480`. O custo f
 | PU "parado" | série pública atrasada (lag CETIP→SGS): ver `estimatedDays`/`/healthz`; K=3 de carry |
 | Histórico vazio | janela pedida inteira antes da emissão (comportamento correto, D6) |
 | Diferença de centavos vs extrato | PU bruto, sem IR/IOF; arredondamentos de exibição do banco |
+| Compra “sumiu” da posição | campo de data digitado como `11/09/2026` pode virar `2026-11-09` (MM/DD) — usar o seletor de calendário ou ISO `2026-09-11`; atividade futura não entra na posição atual |
 
 ## 6. Checklist final da Fase 5
 
