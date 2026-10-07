@@ -4,7 +4,10 @@
   "description": "A Wealthfolio addon for cdb",
   "type": "module",
   "main": "dist/addon.js",
-  "keywords": ["wealthfolio", "addon"],
+  "keywords": [
+    "wealthfolio",
+    "addon"
+  ],
   "license": "MIT",
   "scripts": {
     "build": "vite build",
@@ -27,21 +30,22 @@
     "recharts": "^3.7.0"
   },
   "devDependencies": {
-    "@tanstack/react-query": "^5.90.20",
     "@tailwindcss/vite": "^4.1.13",
-    "@wealthfolio/addon-dev-tools": "^3.8.0",
-    "@wealthfolio/addon-sdk": "^3.8.0",
-    "@wealthfolio/ui": "^3.8.0",
+    "@tanstack/react-query": "^5.90.20",
     "@types/node": "^20.0.0",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.2",
+    "@wealthfolio/addon-dev-tools": "^3.8.0",
+    "@wealthfolio/addon-sdk": "^3.8.0",
+    "@wealthfolio/ui": "^3.8.0",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.561.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "recharts": "^3.7.0",
     "tailwindcss": "^4.1.13",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.2",
     "vite": "^7.1.5"
   }
