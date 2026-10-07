@@ -1,7 +1,7 @@
 {
   "id": "cdb",
   "name": "CDB Cadastro",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Assistente de cadastro de CDBs brasileiros (% CDI e prefixados) com cálculo de PU pela série do BCB",
   "author": "Danilo",
   "main": "dist/addon.js",
@@ -50,8 +50,13 @@
     },
     {
       "category": "market-data",
-      "functions": [{ "name": "sync", "isDeclared": true }],
+      "functions": [{ "name": "sync", "isDeclared": true }, { "name": "getProviders", "isDeclared": true }],
       "purpose": "Sincronizar o preço do novo CDB logo após o cadastro"
+    },
+    {
+      "category": "quotes",
+      "functions": [{ "name": "getHistory", "isDeclared": true }],
+      "purpose": "Conferir se o preço chegou após o cadastro (validação do provider)"
     },
     {
       "category": "network",

@@ -6,6 +6,8 @@ import { buildSymbol, solveEmission, unitPrice, type RateMap, type SymbolKind, t
 import { createCdb } from '../lib/createCdb';
 import { nextBusinessDay, todaySaoPaulo } from '../lib/calendar';
 
+const PROVIDER_CODE_KEY = 'providerCode';
+
 type Mode = 'direct' | 'pu' | 'manual';
 
 interface CalcResult {
@@ -53,6 +55,15 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         if (list.length > 0) setAccountId((current) => current || list[0].id);
       })
       .catch((e) => setError(`Não consegui listar as contas: ${e}`));
+    // Remember the last custom provider code used (the SDK cannot enumerate
+    // individual custom providers — market.getProviders only exposes the
+    // aggregate CUSTOM_SCRAPER entry).
+    ctx.api.storage
+      .get(PROVIDER_CODE_KEY)
+      .then((saved) => {
+        if (saved) setProviderCode(saved);
+      })
+      .catch(() => undefined);
   }, [ctx]);
 
   const canonical = useMemo(() => {
@@ -154,10 +165,11 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
     setBusy(true);
     setError('');
     try {
-      await createCdb({
+      const code = providerCode.trim();
+      const { assetId } = await createCdb({
         ctx,
         accountId,
-        providerCode: providerCode.trim(),
+        providerCode: code,
         symbol: result.canonical,
         name: name.trim() || `${result.canonical} (${result.spec.kind === 'CDI' ? result.spec.ratePct + '% CDI' : result.spec.ratePct + '% a.a.'})`,
         overrideSymbol: result.overrideSymbol,
@@ -165,7 +177,24 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         quantity: result.quantity,
         unitPrice: result.pu,
       });
-      setSuccess(`CDB cadastrado: ${result.canonical}. Posição esperada: ${result.grossToday.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`);
+      await ctx.api.storage.set(PROVIDER_CODE_KEY, code).catch(() => undefined);
+
+      // Validate the wiring right away: the sync above should have produced
+      // at least one quote. An empty history means the provider code or the
+      // override symbol is wrong (position exists but will never price).
+      let priced = true;
+      try {
+        const history = await ctx.api.quotes.getHistory(assetId);
+        priced = Array.isArray(history) && history.length > 0;
+      } catch {
+        priced = false;
+      }
+      const expected = result.grossToday.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      setSuccess(
+        priced
+          ? `CDB cadastrado e precificado: ${result.canonical}. Posição esperada: ${expected}`
+          : `CDB cadastrado (${result.canonical}), mas nenhum preço chegou — confira o código do provider "${code}" e o override ${result.overrideSymbol} na aba Market Data do ativo.`
+      );
       setResult(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
