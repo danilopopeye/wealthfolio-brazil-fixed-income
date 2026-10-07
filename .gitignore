@@ -13,3 +13,5 @@ wealthfolio/
 cache/
 data/
 api/cdbapi
+.env
+api/.env
