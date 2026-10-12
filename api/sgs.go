@@ -67,9 +67,18 @@ func (f *SGSFetcher) fetchRange(ctx context.Context, from, to time.Time) ([]Rate
 		to.Day(), int(to.Month()), to.Year(),
 	)
 
-	body, err := f.fetchWithRetry(ctx, url)
+	body, status, err := f.fetchWithRetry(ctx, url)
 	if err != nil {
 		return nil, err
+	}
+	if status == http.StatusNotFound {
+		// SGS answers 404 "Value(s) not found" for windows without any
+		// published observation (weekend tails, pre-publication hours) —
+		// that is an empty window, not a failure.
+		return []Rate{}, nil
+	}
+	if status != http.StatusOK {
+		return nil, fmt.Errorf("SGS HTTP %d: %.200s", status, body)
 	}
 
 	var rows []sgsRow
@@ -93,20 +102,22 @@ func (f *SGSFetcher) fetchRange(ctx context.Context, from, to time.Time) ([]Rate
 }
 
 // fetchWithRetry performs the GET with a single retry on network errors or
-// 5xx responses (mirrors the resilience posture of design item 1).
-func (f *SGSFetcher) fetchWithRetry(ctx context.Context, url string) ([]byte, error) {
+// 5xx responses (mirrors the resilience posture of design item 1). It
+// returns the body and status for non-5xx responses; interpretation of the
+// status is left to the caller.
+func (f *SGSFetcher) fetchWithRetry(ctx context.Context, url string) ([]byte, int, error) {
 	var lastErr error
 	for attempt := 0; attempt < 2; attempt++ {
 		if attempt > 0 {
 			select {
 			case <-time.After(500 * time.Millisecond):
 			case <-ctx.Done():
-				return nil, ctx.Err()
+				return nil, 0, ctx.Err()
 			}
 		}
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		resp, err := f.client.Do(req)
 		if err != nil {
@@ -123,12 +134,9 @@ func (f *SGSFetcher) fetchWithRetry(ctx context.Context, url string) ([]byte, er
 			lastErr = fmt.Errorf("SGS HTTP %d", resp.StatusCode)
 			continue
 		}
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("SGS HTTP %d: %.200s", resp.StatusCode, body)
-		}
-		return body, nil
+		return body, resp.StatusCode, nil
 	}
-	return nil, lastErr
+	return nil, 0, lastErr
 }
 
 func parseDotFloat(s string) (float64, error) {
