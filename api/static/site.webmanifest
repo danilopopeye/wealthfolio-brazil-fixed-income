@@ -1,0 +1,21 @@
+{
+  "name": "brasil-renda-fixa",
+  "short_name": "renda-fixa",
+  "icons": [
+    {
+      "src": "/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#009C3B",
+  "background_color": "#002776",
+  "display": "standalone"
+}
