@@ -3,350 +3,62 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Assistente de CDB — Wealthfolio</title>
+<title>brasil-renda-fixa — market data</title>
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+<link rel="manifest" href="/site.webmanifest">
 <style>
   :root { color-scheme: light dark; }
-  * { box-sizing: border-box; }
-  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem 4rem; line-height: 1.5; }
-  h1 { font-size: 1.4rem; }
-  h2 { font-size: 1.05rem; margin-top: 2rem; border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent); padding-bottom: .3rem; }
-  fieldset { border: 1px solid color-mix(in srgb, currentColor 25%, transparent); border-radius: 8px; margin: 0; padding: 1rem; display: grid; gap: .8rem; }
-  .row { display: flex; flex-wrap: wrap; gap: .8rem; }
-  .row > * { flex: 1 1 10rem; }
-  label { display: block; font-size: .85rem; margin-bottom: .2rem; }
-  input, select { width: 100%; padding: .45rem .6rem; border-radius: 6px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); background: transparent; color: inherit; font: inherit; }
-  .hint { font-size: .8rem; opacity: .7; }
-  .out { background: color-mix(in srgb, currentColor 7%, transparent); border-radius: 8px; padding: .8rem 1rem; margin-top: .8rem; }
-  .kv { display: flex; justify-content: space-between; gap: 1rem; padding: .25rem 0; flex-wrap: wrap; }
-  .kv b { font-variant-numeric: tabular-nums; }
-  code { background: color-mix(in srgb, currentColor 12%, transparent); padding: .1rem .35rem; border-radius: 4px; font-size: .95em; }
-  button.copy { cursor: pointer; border: none; background: color-mix(in srgb, currentColor 15%, transparent); color: inherit; border-radius: 5px; padding: .1rem .5rem; font-size: .75rem; }
-  button#calc { font: inherit; padding: .5rem 1.2rem; border-radius: 6px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); background: color-mix(in srgb, currentColor 12%, transparent); color: inherit; cursor: pointer; }
-  .err { color: #e11d48; }
-  ol li { margin: .4rem 0; }
-  .check { display: flex; gap: .5rem; align-items: start; font-size: .85rem; }
-  .check input { width: auto; margin-top: .3rem; }
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 2rem 1rem 4rem; line-height: 1.55; }
+  h1 { font-size: 1.5rem; } h2 { font-size: 1.1rem; margin-top: 2rem; border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent); padding-bottom: .3rem; }
+  code { background: color-mix(in srgb, currentColor 10%, transparent); padding: .1rem .35rem; border-radius: 4px; font-size: .95em; }
+  table { border-collapse: collapse; width: 100%; margin: .8rem 0; font-size: .9rem; }
+  th, td { border: 1px solid color-mix(in srgb, currentColor 20%, transparent); padding: .4rem .6rem; text-align: left; vertical-align: top; }
+  th { background: color-mix(in srgb, currentColor 7%, transparent); }
+  p.hint { opacity: .75; font-size: .9rem; }
 </style>
 </head>
 <body>
-<h1>Assistente de cadastro de CDB</h1>
-<p class="hint">Preencha os dados do título e da compra; ao final há o que digitar no Wealthfolio. Nada é salvo — é uma calculadora em cima da API local.</p>
+<h1>brasil-renda-fixa</h1>
+<p>API de market data para renda fixa brasileira: devolve o <strong>PU</strong> (preço unitário, base R$ 1.000,00 na emissão) de CDB, LCI, LCA e LCDA — pós-fixados (% do CDI) e prefixados (% a.a.), valores brutos. Fonte: <a href="https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&amp;dataInicial=01/01/2024&amp;dataFinal=31/12/2024">série 12 (Taxa de juros — CDI) do SGS/BCB</a>, com cache local.</p>
 
-<h2>Chave da API (só se a API estiver com API_KEY configurada)</h2>
-<div class="row">
-  <div>
-    <label for="apikey">X-API-Key</label>
-    <input id="apikey" type="password" placeholder="(vazio se não usa auth)">
-  </div>
-</div>
+<h2>Configuração no Wealthfolio (uma única vez)</h2>
+<p>Em <strong>Settings → Market Data</strong>, crie um custom provider com código <code>brasil-renda-fixa</code> e as duas fontes abaixo (troque <code>HOST</code> pelo endereço desta API):</p>
+<table>
+  <tr><th>Campo</th><th>Fonte latest</th><th>Fonte historical</th></tr>
+  <tr><td>kind</td><td><code>latest</code></td><td><code>historical</code></td></tr>
+  <tr><td>format</td><td><code>json</code></td><td><code>json</code></td></tr>
+  <tr><td>url</td><td><code>http://HOST:8080/pu/{SYMBOL}</code></td><td><code>http://HOST:8080/history/{SYMBOL}?from={FROM}&amp;to={TO}</code></td></tr>
+  <tr><td>pricePath</td><td><code>$.price</code></td><td><code>$.prices[*]</code></td></tr>
+  <tr><td>datePath</td><td><code>$.date</code></td><td><code>$.dates[*]</code></td></tr>
+  <tr><td>dateFormat</td><td>—</td><td><code>%Y-%m-%d</code></td></tr>
+  <tr><td>dateTimezone</td><td>—</td><td><code>America/Sao_Paulo</code></td></tr>
+</table>
+<p class="hint">Se a API estiver com <code>API_KEY</code> configurada, adicione o header <code>{"X-API-Key": "__SECRET__..."}</code> em ambas as fontes (o prefixo <code>__SECRET__</code> guarda o valor no keyring).</p>
 
-<h2>1. Dados do título</h2>
-<fieldset>
-  <div class="row">
-    <div>
-      <label for="kind">Indexador</label>
-      <select id="kind">
-        <option value="CDI">% do CDI (pós-fixado)</option>
-        <option value="PRE">% a.a. (prefixado)</option>
-      </select>
-    </div>
-    <div>
-      <label for="rate">Taxa contratada</label>
-      <input id="rate" type="number" step="0.01" min="0.01" max="999.99" placeholder="104.50">
-    </div>
-    <div>
-      <label for="emission">Data de emissão (se souber)</label>
-      <input id="emission" type="date">
-    </div>
-  </div>
-  <div class="row">
-    <div>
-      <label for="bank">Banco / nome curto (para o symbol do Wealthfolio)</label>
-      <input id="bank" type="text" placeholder="ex.: NEON, Banco B, INTER">
-    </div>
-  </div>
-  <p class="hint">Não sabe a emissão? Escolha o modo certo na seção 2 — ela é descoberta automaticamente.</p>
-  <div class="out" id="symbolOut"></div>
-</fieldset>
+<h2>Gramática do symbol</h2>
+<p><code>^(CDI|PRE)-\d{1,3}(\.\d{2})?-\d{8}$</code> — indexador, taxa contratada e data de emissão:</p>
+<table>
+  <tr><td><code>CDI-104.50-20260713</code></td><td>104,50% do CDI, emissão 13/07/2026</td></tr>
+  <tr><td><code>CDI-100-20251226</code></td><td>100% do CDI (taxa inteira vale)</td></tr>
+  <tr><td><code>PRE-14.30-20260713</code></td><td>14,30% a.a. prefixado</td></tr>
+</table>
 
-<h2>2. Compra</h2>
-<fieldset>
-  <div class="row">
-    <div>
-      <label for="mode">Como você aplicou?</label>
-      <select id="mode">
-        <option value="direct">Apliquei direto no banco (título novo, emitido para mim)</option>
-        <option value="pu">Comprei título existente — sei o PU pago ou a quantidade</option>
-        <option value="manual">Sei a data de emissão (preenchida acima)</option>
-      </select>
-    </div>
-  </div>
-  <div class="row" id="directRow" hidden>
-    <label class="check"><input type="checkbox" id="nextDay"> Minha aplicação começa a render só no dia útil seguinte (emissão = próximo dia útil)</label>
-  </div>
-  <div class="row" id="puRow" hidden>
-    <div>
-      <label for="pu">PU pago (o que o app mostrou)</label>
-      <input id="pu" type="number" step="0.00000001" min="1000" placeholder="1023.61">
-    </div>
-    <div>
-      <label for="qty">…ou quantidade de títulos</label>
-      <input id="qty" type="number" step="0.00001" min="0" placeholder="4.88191">
-    </div>
-  </div>
-  <div class="row">
-    <div>
-      <label for="buydate">Data da compra / aplicação</label>
-      <input id="buydate" type="date">
-    </div>
-    <div>
-      <label for="invested">Valor aplicado (R$)</label>
-      <input id="invested" type="number" step="0.01" min="0.01" placeholder="5000.00">
-    </div>
-  </div>
-  <button id="calc" type="button">Calcular</button>
-  <div class="out" id="buyOut"></div>
-</fieldset>
+<h2>Endpoints</h2>
+<table>
+  <tr><td><code>GET /pu/{SYMBOL}</code></td><td>PU de hoje (janela [emissão, hoje); fim de semana = próximo dia útil)</td></tr>
+  <tr><td><code>GET /history/{SYMBOL}?from=&amp;to=</code></td><td>série do PU, uma linha por dia útil</td></tr>
+  <tr><td><code>GET /solve/emission?kind=&amp;rate=&amp;pu=&amp;settlement=</code></td><td>descobre a data de emissão a partir do PU pago</td></tr>
+  <tr><td><code>GET /healthz</code></td><td>estado do cache e da fonte</td></tr>
+</table>
 
-<h2>3. O que preencher no Wealthfolio</h2>
-<ol id="steps">
-  <li><b>Settings → Market Data</b>: o provider <code>cdb-brasil-bcb</code> já deve existir (criar uma única vez, ver docs/05).</li>
-  <li><b>Novo ativo</b>: symbol canônico <span id="s-canonical"></span> · tipo <b>Equity</b> · moeda <b>BRL</b> · exchange <b>MANUAL</b> · quote mode <b>MARKET</b>.</li>
-  <li><b>Aba Market Data do ativo</b>: provider <code>cdb-brasil-bcb</code> com symbol override <span id="s-override"></span>.</li>
-  <li><b>Atividade de compra (BUY)</b>: data <span id="s-date"></span> <b>usando o seletor de calendário</b> (digitar 11/09 pode virar 9 de novembro) · unitPrice <span id="s-price"></span> · quantity <span id="s-qty"></span>.</li>
-  <li>Conferir: o valor da posição deve bater com o <b>valor bruto</b> do app do banco, a centavos. Se não bater e o modo for "apliquei direto", volte e marque/desmarque "dia útil seguinte".</li>
-</ol>
-
-<script>
-"use strict";
-const $ = (id) => document.getElementById(id);
-
-function apiHeaders() {
-  const h = {};
-  const key = $("apikey").value.trim();
-  if (key) h["X-API-Key"] = key;
-  return h;
-}
-
-async function apiGet(url) {
-  const resp = await fetch(url, { headers: apiHeaders() });
-  const body = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(body.error || ("HTTP " + resp.status));
-  return body;
-}
-
-function copyBtn(text) {
-  const b = document.createElement("button");
-  b.className = "copy";
-  b.type = "button";
-  b.textContent = "copiar";
-  b.onclick = () => navigator.clipboard.writeText(text).then(() => {
-    b.textContent = "copiado!";
-    setTimeout(() => (b.textContent = "copiar"), 1200);
-  });
-  return b;
-}
-
-function kvRow(label, valueNode, copyText) {
-  const div = document.createElement("div");
-  div.className = "kv";
-  const span = document.createElement("span");
-  span.textContent = label;
-  div.append(span, valueNode);
-  if (copyText !== undefined) div.append(copyBtn(copyText));
-  return div;
-}
-
-function textNode(t) {
-  const b = document.createElement("b");
-  b.textContent = t;
-  return b;
-}
-
-function textNodeP(t, cls) {
-  const s = document.createElement("span");
-  if (cls) s.className = cls;
-  s.textContent = t;
-  return s;
-}
-
-function codeNode(t) {
-  const c = document.createElement("code");
-  c.textContent = t;
-  return c;
-}
-
-function rateParts() {
-  const rate = parseFloat($("rate").value);
-  return rate;
-}
-
-function symbolString() {
-  const kind = $("kind").value;
-  const rate = rateParts();
-  const emission = $("emission").value; // YYYY-MM-DD
-  if (!rate || !emission) return null;
-  return `${kind}-${rate.toFixed(2)}-${emission.replaceAll("-", "")}`;
-}
-
-function canonicalString() {
-  const bank = ($("bank").value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const rate = rateParts();
-  if (!bank || !rate) return null;
-  return `CDB-${bank}-${Math.round(rate * 100)}`;
-}
-
-function renderSymbol() {
-  const out = $("symbolOut");
-  out.textContent = "";
-  const sym = symbolString();
-  if (!sym) {
-    out.append(textNodeP("Preencha taxa (e emissão, se souber)…", "hint"));
-    refreshSteps();
-    return;
-  }
-  out.append(kvRow("Symbol override (para a aba Market Data)", textNode(sym), sym));
-  const canon = canonicalString();
-  if (canon) out.append(kvRow("Symbol canônico sugerido (Wealthfolio)", textNode(canon), canon));
-  refreshSteps();
-}
-
-function nextWeekday(iso) {
-  const d = new Date(iso + "T12:00:00");
-  do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
-  return d.toISOString().slice(0, 10);
-}
-
-window.buyResult = null;
-
-function need(msg) {
-  const out = $("buyOut");
-  out.textContent = "";
-  out.append(textNodeP(msg, "hint"));
-}
-
-async function calcBuy() {
-  const out = $("buyOut");
-  out.textContent = "";
-  const rate = rateParts();
-  const kind = $("kind").value;
-  const buyDate = $("buydate").value;
-  const invested = parseFloat($("invested").value);
-  const mode = $("mode").value;
-  if (!rate || !buyDate || !invested) {
-    need("Preencha taxa, data da compra e valor aplicado.");
-    return;
-  }
-
-  try {
-    let emission, pu, note = "";
-
-    if (mode === "direct") {
-      // Título emitido para você na aplicação: PU inicial 1000.
-      emission = $("nextDay").checked ? nextWeekday(buyDate) : buyDate;
-      pu = 1000;
-      note = " (título novo: PU de emissão 1000)";
-    } else if (mode === "pu") {
-      let target = parseFloat($("pu").value);
-      if (!target) {
-        const qty = parseFloat($("qty").value);
-        if (qty) target = invested / qty;
-      }
-      if (!target) {
-        need("Informe o PU pago ou a quantidade de títulos.");
-        return;
-      }
-      // Liquidação D+1: o PU pago é o do dia útil seguinte à compra.
-      const solved = await apiGet(`/solve/emission?kind=${kind}&rate=${rate}&pu=${target}&settlement=${nextWeekday(buyDate)}`);
-      emission = solved.emission;
-      pu = target;
-      note = solved.match === "poor"
-        ? ` (atenção: ajuste fraco — PU implícito ${solved.pu.toFixed(4)}, diff ${solved.diff.toFixed(4)}; confira taxa e PU informados)`
-        : ` (emissão descoberta de trás pra frente, precisão ${solved.match})`;
-    } else {
-      if (!$("emission").value) {
-        need("Preencha a data de emissão na seção 1, ou escolha outro modo.");
-        return;
-      }
-      emission = $("emission").value;
-      const sym = `${kind}-${rate.toFixed(2)}-${emission.replaceAll("-", "")}`;
-      const to = new Date(buyDate + "T12:00:00");
-      to.setDate(to.getDate() + 10);
-      const hist = await apiGet(`/history/${sym}?from=${buyDate}&to=${to.toISOString().slice(0, 10)}`);
-      pu = null;
-      let puDate = null;
-      const rows = hist.dates || [];
-      for (let i = 0; i < rows.length; i++) {
-        if (rows[i] > buyDate) { pu = hist.prices[i]; puDate = rows[i]; break; }
-      }
-      if (pu === null) {
-        const latest = await apiGet(`/pu/${sym}`);
-        pu = latest.price;
-        note = " (PU mais recente disponível)";
-      } else {
-        note = ` (PU de ${fmtDate(puDate)})`;
-      }
-    }
-
-    $("emission").value = emission;
-    renderSymbol();
-    const sym = symbolString();
-
-    const qty = invested / pu;
-    const current = await apiGet(`/pu/${sym}`);
-    const nowValue = qty * current.price;
-
-    out.append(kvRow(`PU pago${note}`, textNode(n(pu)), n(pu)));
-    out.append(kvRow("Quantidade de títulos", textNode(qty.toFixed(5)), qty.toFixed(5)));
-    out.append(kvRow("Emissão usada", textNode(fmtDate(emission)), emission));
-    out.append(kvRow("Valor bruto hoje (quantity × PU atual)", textNode(money(nowValue))));
-    out.append(kvRow("PU atual", textNode(n(current.price))));
-    if (current.estimatedDays > 0) {
-      out.append(textNodeP(`atenção: ${current.estimatedDays} dia(s) de CDI ainda não publicado pela fonte oficial (carry-forward)`, "hint"));
-    }
-    window.buyResult = { pu, qty: qty.toFixed(5), buyDate };
-    refreshSteps();
-  } catch (e) {
-    out.append(textNodeP("Erro: " + e.message, "err"));
-  }
-}
-
-function n(x) { return x.toLocaleString("pt-BR", { maximumFractionDigits: 8 }); }
-function money(x) { return x.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
-function fmtDate(iso) {
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
-}
-
-function refreshSteps() {
-  const sym = symbolString();
-  const canon = canonicalString();
-  const set = (id, node) => {
-    const el = $(id);
-    el.textContent = "";
-    if (node) el.append(node);
-  };
-  set("s-canonical", canon ? codeNode(canon) : textNodeP("(preencha o banco)", "hint"));
-  set("s-override", sym ? codeNode(sym) : textNodeP("(preencha taxa/emissão)", "hint"));
-  set("s-date", $("buydate").value ? textNode(fmtDate($("buydate").value)) : textNodeP("(data da compra)", "hint"));
-  set("s-price", window.buyResult ? textNode(window.buyResult.pu.toFixed(4)) : textNodeP("(calcule a compra)", "hint"));
-  set("s-qty", window.buyResult ? codeNode(window.buyResult.qty) : textNodeP("(calcule a compra)", "hint"));
-}
-
-function onModeChange() {
-  const mode = $("mode").value;
-  $("directRow").hidden = mode !== "direct";
-  $("puRow").hidden = mode !== "pu";
-}
-
-["kind", "rate", "emission", "bank"].forEach((id) => $(id).addEventListener("input", renderSymbol));
-["buydate"].forEach((id) => $(id).addEventListener("input", refreshSteps));
-$("mode").addEventListener("change", onModeChange);
-$("qty").addEventListener("input", () => { if ($("qty").value) $("pu").value = ""; });
-$("pu").addEventListener("input", () => { if ($("pu").value) $("qty").value = ""; });
-$("calc").addEventListener("click", calcBuy);
-renderSymbol();
-onModeChange();
-</script>
+<h2>Notas</h2>
+<ul>
+  <li>Valores brutos, sem IR/IOF; PU de emissão = 1.000,00.</li>
+  <li><code>estimatedDays</code> &gt; 0: dias de CDI do final da série ainda não publicados pelo BCB (taxa carregada da última confirmada, limite configurável).</li>
+  <li>Datas em <code>YYYY-MM-DD</code>; fuso de referência <code>America/Sao_Paulo</code>.</li>
+</ul>
 </body>
 </html>

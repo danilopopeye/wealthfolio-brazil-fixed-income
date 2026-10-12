@@ -84,13 +84,13 @@ Exemplo com R$ 5.000,00 em cada: Banco A `4.88191`, Banco B `4.88480`. O custo f
 
 ### Descobrindo a data de emissão
 
-Nem todo app informa a emissão; há três situações (todas cobertas pelo assistente em `http://localhost:8080`):
+Nem todo app informa a emissão; há três situações (todas cobertas pelo addon Cadastro Renda Fixa, que substituiu o antigo assistente web):
 
-1. **Apliquei direto no banco** — o título é emitido para você na aplicação: emissão = data da aplicação, PU inicial 1000. Se o valor não bater com o app, experimentar emissão no dia útil seguinte (o assistente tem a opção).
+1. **Apliquei direto no banco** — o título é emitido para você na aplicação: emissão = data da aplicação, PU inicial 1000. Se o valor não bater com o app, experimentar emissão no dia útil seguinte (o addon tem a opção).
 2. **Comprei título existente e sei o PU pago (ou a quantidade)** — o `/solve/emission` inverte a conta contra a série do CDI e devolve a emissão (funciona também para prefixado, via calendário). Tolerância: com PU de 2 casas o dia certo é recuperado (passo diário ≈ 0,5 de PU).
 3. **O termo do título mostra a emissão** — preencher direto.
 
-**Achar o PU pago de qualquer compra sem terminal**: abra o assistente em `http://localhost:8080` (servido pela própria API) — dados do título, data da compra e valor aplicado retornam o PU do dia útil seguinte (liquidação D+1), a quantidade de títulos e o checklist do que preencher no Wealthfolio, com botões de copiar.
+**Achar o PU pago de qualquer compra sem terminal**: use o addon Cadastro Renda Fixa no Wealthfolio — dados do título, data da compra e valor aplicado retornam o PU do dia útil seguinte (liquidação D+1), a quantidade de títulos e o checklist do que será criado, tudo validado na hora.
 
 ## 4. Critérios de aceite
 
@@ -99,6 +99,19 @@ Nem todo app informa a emissão; há três situações (todas cobertas pelo assi
 3. Histórico no gráfico: um ponto por dia útil desde a emissão; **sem** 07/09; primeiro ponto `1000.00` em 13/07.
 4. Ganho não realizado ≈ +0,27% (Banco A) e +0,26% (Banco B) — uma semana de CDI a 104,5%.
 5. `/healthz` com `source.ok=true` e `cdi.lastDate` avançando conforme a série publica.
+
+### Tolerâncias por classe (validadas em produção, 12/10/2026)
+
+| Classe | Tolerância | Causa do resíduo | Evidência |
+|---|---|---|---|
+| Fixtures de janela curta (≤ 2 meses) | 1e-6 por PU | — | as 4 leituras reais do bootstrap |
+| Prefixado, qualquer janela | centavos | arredondamento de exibição do banco | PRE 14,80% desde 17/04: **R$ 0,01** |
+| Pós-fixado, janela longa | ~0,01% relativo | arredondamento acumulado da série 12 (~0,2 ppm/dia × N dias úteis; o banco usa o fator interno não arredondado) | CDI 109,70% desde 06/02 (172 dias úteis): **R$ 1,05 = 0,005% = 0,085 dias de CDI** |
+| LCI %CDI | idem pós-fixado | idem | LCI 98% desde 06/03: **R$ 0,08 = 0,00007%** — o melhor resultado do projeto |
+
+**Nota de escopo** (12/10/2026): o bootstrap colocava LCI/LCA fora de escopo, mas a matemática de pós-fixado %CDI é idêntica — a LCI acima foi validada em produção com o resíduo mais baixo do projeto. O assistente suporta CDB, LCI, LCA e LCDA (`TYPE-SLUG` no código canônico; LCA/LCDA ainda sem leitura real de validação `[hipótese]`). Fora do escopo e sem suporte: IPCA+ (série diferente, exclusão explícita do bootstrap) e CDI + spread a.a. (fórmula distinta de % do CDI — extensão futura de gramática de symbol).
+
+**Regra de bolso para diagnosticar diferenças**: converter a diferença em "dias de CDI" (`diferença % ÷ (0,0508 × %CDI/100)`). Fração de dia = ruído da fonte (acima). Dia inteiro = convenção de início (D vs D+1). 2–5 dias = defasagem de exibição do app (nosso valor é o mais novo). Valor estranho = taxa contratada ou emissão derivada torta.
 
 ## 5. Troubleshooting
 

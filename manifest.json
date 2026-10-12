@@ -1,9 +1,9 @@
 {
   "id": "cdb",
-  "name": "cdb",
-  "version": "1.0.0",
-  "description": "A Wealthfolio addon for cdb",
-  "author": "Anonymous",
+  "name": "Cadastro Renda Fixa",
+  "version": "1.6.1",
+  "description": "Assistente de cadastro de renda fixa brasileira (CDB, LCI, LCA e LCDA; % CDI e prefixados) com cálculo de PU pela série do BCB",
+  "author": "Danilo",
   "main": "dist/addon.js",
   "sdkVersion": "3.8.0",
   "minWealthfolioVersion": "3.8.0",
@@ -15,7 +15,7 @@
         {
           "id": "cdb",
           "route": "cdb",
-          "label": "cdb",
+          "label": "Cadastro Renda Fixa",
           "icon": "squares-four",
           "order": 100
         }
@@ -34,14 +34,39 @@
   },
   "permissions": [
     {
+      "category": "accounts",
+      "functions": [{ "name": "getAll", "isDeclared": true }],
+      "purpose": "Listar contas para associar a compra do CDB"
+    },
+    {
+      "category": "activities",
+      "functions": [{ "name": "create", "isDeclared": true }],
+      "purpose": "Registrar a atividade de compra e criar a security"
+    },
+    {
+      "category": "assets",
+      "functions": [{ "name": "updateProfile", "isDeclared": true }],
+      "purpose": "Configurar o custom provider de market data do ativo (symbol override)"
+    },
+    {
+      "category": "market-data",
+      "functions": [{ "name": "sync", "isDeclared": true }, { "name": "getProviders", "isDeclared": true }],
+      "purpose": "Sincronizar o preço do novo CDB logo após o cadastro"
+    },
+    {
+      "category": "quotes",
+      "functions": [{ "name": "getHistory", "isDeclared": true }],
+      "purpose": "Conferir se o preço chegou após o cadastro (validação do provider)"
+    },
+    {
       "category": "network",
       "functions": [{ "name": "request", "isDeclared": true }],
-      "purpose": "Fetch daily CDI rates from the Banco Central do Brasil SGS API"
+      "purpose": "Obter a série diária do CDI diretamente do Banco Central (api.bcb.gov.br)"
     }
   ],
   "network": {
     "allowedHosts": ["api.bcb.gov.br"]
   },
-  "keywords": ["wealthfolio", "addon"],
+  "keywords": ["wealthfolio", "addon", "cdb", "cdi", "brazil"],
   "license": "MIT"
 }
