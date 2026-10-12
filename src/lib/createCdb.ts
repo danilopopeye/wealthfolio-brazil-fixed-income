@@ -32,7 +32,9 @@ export async function createCdb(input: CreateCdbInput): Promise<CreateCdbResult>
   const activity = await ctx.api.activities.create({
     accountId,
     activityType: 'BUY',
-    activityDate: `${buyDate}T12:00:00`,
+    // RFC3339 requires an explicit timezone: bare "YYYY-MM-DDTHH:mm:ss"
+    // is rejected by the host validator.
+    activityDate: `${buyDate}T12:00:00Z`,
     quantity: quantity.toFixed(5),
     unitPrice: unitPrice.toFixed(8),
     currency: 'BRL',
