@@ -167,7 +167,7 @@ docker compose --env-file .env.docker -f compose.yml -f compose.dev.yml up
 # http://localhost:8088
 ```
 
-**Endereço da cdb-api nas fontes do provider, por modo:**
+**Endereço da fixed-income-api nas fontes do provider, por modo:**
 
 | Modo | URL da fonte |
 |---|---|
