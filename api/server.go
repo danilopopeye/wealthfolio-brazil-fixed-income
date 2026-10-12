@@ -37,6 +37,7 @@ func NewServer(engine *Engine, apiKey string, logger *slog.Logger) *Server {
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.handleHealth)
+	registerManual(mux)
 	mux.Handle("GET /pu/{symbol}", s.auth(http.HandlerFunc(s.handlePU)))
 	mux.Handle("GET /history/{symbol}", s.auth(http.HandlerFunc(s.handleHistory)))
 	mux.Handle("GET /solve/emission", s.auth(http.HandlerFunc(s.handleSolveEmission)))
