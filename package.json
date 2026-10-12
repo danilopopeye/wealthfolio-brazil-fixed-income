@@ -1,5 +1,5 @@
 {
-  "name": "wealthfolio-renda-fixa-addon",
+  "name": "wealthfolio-brazil-fixed-income",
   "version": "1.6.1",
   "description": "Wealthfolio addon for Brazilian fixed income: registers CDB, LCI, LCA and LCDA titles (%CDI and pre-fixed) with PU computed from the BCB CDI series",
   "type": "module",
@@ -15,6 +15,14 @@
   ],
   "license": "MIT",
   "author": "Danilo",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/danilopopeye/wealthfolio-brazil-fixed-income.git"
+  },
+  "homepage": "https://github.com/danilopopeye/wealthfolio-brazil-fixed-income#readme",
+  "bugs": {
+    "url": "https://github.com/danilopopeye/wealthfolio-brazil-fixed-income/issues"
+  },
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=22"
