@@ -35,7 +35,7 @@ docker compose up -d
 curl localhost:8080/healthz
 ```
 
-The API root (`http://localhost:8080/`) serves a static setup manual with the exact custom provider configuration to paste into Wealthfolio (Settings → Market Data, provider code `brasil-renda-fixa`).
+The API root (`http://localhost:8080/`) serves a static setup manual with the exact custom provider configuration to paste into Wealthfolio (Settings → Market Data, provider code `brazil-fixed-income`).
 
 ### Addon
 

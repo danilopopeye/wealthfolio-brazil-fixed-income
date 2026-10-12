@@ -7,7 +7,7 @@ import { createCdb } from '../lib/createCdb';
 import { nextBusinessDay, todaySaoPaulo } from '../lib/calendar';
 
 const PROVIDER_CODE_KEY = 'providerCode';
-const DEFAULT_PROVIDER_CODE = 'brasil-renda-fixa';
+const DEFAULT_PROVIDER_CODE = 'brazil-fixed-income';
 
 type Mode = 'direct' | 'pu' | 'manual';
 
