@@ -78,7 +78,7 @@ O `holidays-check` é a ferramenta de manutenção do calendário (design D3): i
    | dateFormat / dateTimezone | — | `%Y-%m-%d` / `America/Sao_Paulo` |
    | headers | `{"X-API-Key":"__SECRET__cdb_api_key"}` (se auth ligada) | idem |
 
-2. Por CDB (resumo; roteiro detalhado com telas na Fase 5): asset com symbol canônico limpo, `instrumentType` **Equity**, `quoteCcy` BRL, exchange MANUAL, `quoteMode` MARKET, provider `CUSTOM:cdb`, e **override de symbol** com o symbol parametrizado.
+2. Por CDB (resumo; roteiro detalhado com telas na Fase 5): pelo addon, asset nasce **Bond** quando o vencimento é preenchido (tipo correto; o addon grava o override nas duas chaves `CUSTOM_SCRAPER` + `CUSTOM:<code>`, o que desvia do roteamento BondIsin), com `quoteCcy` BRL, `quoteMode` MARKET e **override de symbol** parametrizado; sem vencimento, registra `Equity`. Cadastro manual pela UI (override de chave única) deve usar `Equity`. Provider `CUSTOM:cdb`, exchange MANUAL.
 
 ## Exemplos de securities (os dois títulos reais)
 

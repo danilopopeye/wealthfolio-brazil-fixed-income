@@ -112,6 +112,7 @@ Nenhuma restrição encontrada `[código]`: `quote_ccy` é string livre no asset
 - `QuoteMode::Market|Manual` (`assets_model.rs:60-64`): Manual = preços digitados; para CDB usamos **Market** + custom provider.
 - Criação manual: trim+uppercase, exchange `MANUAL`, tipos EQUITY/CRYPTO/OTHER na UI (`symbol-selector-mobile.tsx:74-146`).
 - **`InstrumentType::Bond` roteia para `ProviderInstrument::BondIsin`, que o custom provider rejeita** ("Unexpected instrument type", `custom_scraper_provider.rs:473-484`; mapeamento em `assets_service.rs:788-800`). Equity ou sem tipo → `EquitySymbol`, aceito. O asset Bond tem campos de maturity/coupon (`asset-bond-spec.ts`), mas é incompatível com o custom provider — **CDB deve ser `Equity` (ou sem tipo) com `quote_ccy` BRL**.
+  - *(emenda 13/10/2026)*: a conclusão "deve ser Equity" foi superada: o `AssetResolver` é o primeiro da cadeia e devolve o instrumento **direto do override** (`market-data/src/resolver/asset_resolver.rs:43-52`) — com o override registrado **nas duas chaves** (`CUSTOM_SCRAPER` + `CUSTOM:<code>`, ambas `type: equity_symbol`), um asset **Bond** resolve para `EquitySymbol` antes de chegar ao provider. É o que o addon grava hoje; cadastro manual pela UI (chave única) segue exigindo Equity.
 
 ### 10. Compra com preço diferente do PU do dia (D+1)
 

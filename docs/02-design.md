@@ -90,7 +90,7 @@ Go stdlib (`net/http`), binário único, sem framework `[decisão]`.
    | dateFormat / dateTimezone | — | `%Y-%m-%d` / `America/Sao_Paulo` |
    | headers | `{"X-API-Key":"__SECRET__cdb_api_key"}` (se auth ligada) | idem |
 
-2. Por CDB: asset com symbol canônico limpo, `instrumentType` **Equity** (Bond roteia para BondIsin e o custom provider rejeita `[código]` 01, item 9), `quoteCcy` BRL, exchange MANUAL, `quoteMode` MARKET, provider preferido `CUSTOM:cdb`, override de symbol = `CDI-104.50-20260713`. Roteiro passo a passo com telas fica para a Fase 5 `[decisão]`.
+2. Por CDB: asset com symbol canônico limpo, `instrumentType` **Bond** com data de vencimento preenchida — o tipo correto de renda fixa — desde que o override seja registrado **nas duas chaves** (`CUSTOM_SCRAPER` + `CUSTOM:<code>`): o `AssetResolver` devolve o instrumento direto do override antes do roteamento Bond→BondIsin *(emenda 13/10/2026; a recomendação original de Equity valia só para override de chave única, como o da UI manual)*. Sem vencimento conhecido, `Equity` permanece o fallback. `quoteCcy` BRL, exchange MANUAL, `quoteMode` MARKET, provider preferido `CUSTOM:cdb`, override de symbol = `CDI-104.50-20260713`. Roteiro passo a passo com telas fica para a Fase 5 `[decisão]`.
 
 ## 7. Compra com liquidação D+1
 

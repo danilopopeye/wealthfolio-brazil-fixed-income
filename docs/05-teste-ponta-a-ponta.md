@@ -59,14 +59,15 @@ Um asset por título. Campos essenciais:
 |---|---|---|
 | Symbol canônico | `CDB-BANCOA-1045` | `CDB-BANCOB-1430` |
 | Nome | `CDB Banco A 104,50% CDI jul/2027` | `CDB Banco B 14,30% a.a. jul/2030` |
-| instrumentType | **Equity** | **Equity** |
+| instrumentType | **Bond** (com vencimento) | **Bond** (com vencimento) |
 | Moeda | `BRL` | `BRL` |
 | Exchange | `MANUAL` | `MANUAL` |
 | Quote mode | `MARKET` | `MARKET` |
 
 Notas:
-- **Não usar Bond**: `InstrumentType::Bond` roteia para `BondIsin`, que o custom provider rejeita ("Unexpected instrument type") — investigação 01, item 9.
-- O vencimento fica no nome/notas (não há campo de maturity fora do tipo Bond).
+- **Bond funciona pelo addon**: o assistente grava o override nas **duas chaves** (`CUSTOM_SCRAPER` + `CUSTOM:cdb`), e o resolver devolve o instrumento direto do override — o roteamento Bond→BondIsin, que o custom provider rejeitaria, não é alcançado *(emenda 13/10/2026; a recomendação original de Equity valia para cadastro manual)*.
+- **Cadastro manual pela UI** (override de chave única): usar **Equity**, com o vencimento no nome/notas — sem a segunda chave, Bond não precifica.
+- Pelo addon, o vencimento preenchido grava o BondSpec (`metadata.bond`: maturity, faceValue 1000, zero cupom) e o campo aparece no edit sheet.
 - Os symbols canônicos respeitam a regex de atividades (máx. 2 separadores) — seguros inclusive em import de CSV.
 
 **Aba Market Data do asset**: provider preferido `cdb`; na linha de override do provider, symbol `CDI-104.50-20260713` (Banco A) e `PRE-14.30-20260713` (Banco B). É deste override que o `{SYMBOL}` da URL é preenchido.
