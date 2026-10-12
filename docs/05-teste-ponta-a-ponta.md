@@ -100,6 +100,16 @@ Nem todo app informa a emissão; há três situações (todas cobertas pelo assi
 4. Ganho não realizado ≈ +0,27% (Banco A) e +0,26% (Banco B) — uma semana de CDI a 104,5%.
 5. `/healthz` com `source.ok=true` e `cdi.lastDate` avançando conforme a série publica.
 
+### Tolerâncias por classe (validadas em produção, 12/10/2026)
+
+| Classe | Tolerância | Causa do resíduo | Evidência |
+|---|---|---|---|
+| Fixtures de janela curta (≤ 2 meses) | 1e-6 por PU | — | as 4 leituras reais do bootstrap |
+| Prefixado, qualquer janela | centavos | arredondamento de exibição do banco | PRE 14,80% desde 17/04: **R$ 0,01** |
+| Pós-fixado, janela longa | ~0,01% relativo | arredondamento acumulado da série 12 (~0,2 ppm/dia × N dias úteis; o banco usa o fator interno não arredondado) | CDI 109,70% desde 06/02 (172 dias úteis): **R$ 1,05 = 0,005% = 0,085 dias de CDI** |
+
+**Regra de bolso para diagnosticar diferenças**: converter a diferença em "dias de CDI" (`diferença % ÷ (0,0508 × %CDI/100)`). Fração de dia = ruído da fonte (acima). Dia inteiro = convenção de início (D vs D+1). 2–5 dias = defasagem de exibição do app (nosso valor é o mais novo). Valor estranho = taxa contratada ou emissão derivada torta.
+
 ## 5. Troubleshooting
 
 | Sintoma | Causa provável |
