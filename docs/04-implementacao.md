@@ -36,7 +36,6 @@ Configuração por env:
 
 ```
 GET /healthz
-GET /                            → assistente de cadastro (calculadora de symbol/emissão/PU/quantidade)
 GET /pu/{SYMBOL}                  → {"symbol","date","price","currency","estimatedDays"}
 GET /history/{SYMBOL}?from=&to=   → {"symbol","currency","from","to","dates":[],"prices":[],"estimatedDays"}
 GET /solve/emission?kind=&rate=&pu=&settlement= → descobre a data de emissão a partir do PU pago
@@ -100,7 +99,6 @@ O `holidays-check` é a ferramenta de manutenção do calendário (design D3): i
 | `api/cache.go` | cache JSON atômico (D1) |
 | `api/engine.go` | PU, carry-forward (D2), janela `[emissão, D)` |
 | `api/server.go` | HTTP, `X-API-Key`, clamps do histórico (D6), `/solve/emission` |
-| `api/wizard.go` + `static/index.html` | assistente de cadastro em `/` (embutido no binário) |
 | `api/main.go` | env, wiring, graceful shutdown, subcommand `holidays-check` |
 
 ## Pendências herdadas

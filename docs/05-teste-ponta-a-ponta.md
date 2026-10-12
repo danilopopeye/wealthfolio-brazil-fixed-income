@@ -84,13 +84,13 @@ Exemplo com R$ 5.000,00 em cada: Banco A `4.88191`, Banco B `4.88480`. O custo f
 
 ### Descobrindo a data de emissão
 
-Nem todo app informa a emissão; há três situações (todas cobertas pelo assistente em `http://localhost:8080`):
+Nem todo app informa a emissão; há três situações (todas cobertas pelo addon Cadastro Renda Fixa, que substituiu o antigo assistente web):
 
-1. **Apliquei direto no banco** — o título é emitido para você na aplicação: emissão = data da aplicação, PU inicial 1000. Se o valor não bater com o app, experimentar emissão no dia útil seguinte (o assistente tem a opção).
+1. **Apliquei direto no banco** — o título é emitido para você na aplicação: emissão = data da aplicação, PU inicial 1000. Se o valor não bater com o app, experimentar emissão no dia útil seguinte (o addon tem a opção).
 2. **Comprei título existente e sei o PU pago (ou a quantidade)** — o `/solve/emission` inverte a conta contra a série do CDI e devolve a emissão (funciona também para prefixado, via calendário). Tolerância: com PU de 2 casas o dia certo é recuperado (passo diário ≈ 0,5 de PU).
 3. **O termo do título mostra a emissão** — preencher direto.
 
-**Achar o PU pago de qualquer compra sem terminal**: abra o assistente em `http://localhost:8080` (servido pela própria API) — dados do título, data da compra e valor aplicado retornam o PU do dia útil seguinte (liquidação D+1), a quantidade de títulos e o checklist do que preencher no Wealthfolio, com botões de copiar.
+**Achar o PU pago de qualquer compra sem terminal**: use o addon Cadastro Renda Fixa no Wealthfolio — dados do título, data da compra e valor aplicado retornam o PU do dia útil seguinte (liquidação D+1), a quantidade de títulos e o checklist do que será criado, tudo validado na hora.
 
 ## 4. Critérios de aceite
 
