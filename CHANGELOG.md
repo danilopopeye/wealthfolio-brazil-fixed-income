@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-12
+
+### Added
+- Static setup manual and favicon kit served at the API root (/) — the exact
+  custom provider configuration for Wealthfolio, no repository access needed
+- Tag-driven release flow: test gate, manifest-vs-tag version gate,
+  changelog-derived release notes, and SLSA build provenance attestation on
+  the zip (verifiable with gh attestation verify)
+- CI: hermetic gates for both components (Go vet/tests and gofmt, addon
+  type-check + fixture engine + production build, Docker image build), with
+  GitHub Actions pinned to commit SHAs
+
+### Changed
+- BREAKING: default custom provider code renamed to brazil-fixed-income —
+  recreate the provider in Wealthfolio Settings → Market Data and point
+  existing assets at it (the old cdb-brasil-bcb setups keep pricing with the
+  old code until migrated)
+- Compose service renamed to fixed-income-api
+- Go module renamed to github.com/danilopopeye/wealthfolio-brazil-fixed-income
+- Package renamed to wealthfolio-brazil-fixed-income; README rewritten in
+  English
+
+## [Unreleased-old]
+
 ## [1.6.1] - 2026-10-13
 
 ### Changed
