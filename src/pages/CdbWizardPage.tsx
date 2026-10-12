@@ -7,6 +7,7 @@ import { createCdb } from '../lib/createCdb';
 import { nextBusinessDay, todaySaoPaulo } from '../lib/calendar';
 
 const PROVIDER_CODE_KEY = 'providerCode';
+const DEFAULT_PROVIDER_CODE = 'brasil-renda-fixa';
 
 type Mode = 'direct' | 'pu' | 'manual';
 
@@ -60,7 +61,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
   const fmtDate = (iso: string) => (language === 'pt' ? iso.split('-').reverse().join('/') : iso);
   const [accounts, setAccounts] = useState<{ id: string; name: string }[]>([]);
   const [accountId, setAccountId] = useState('');
-  const [providerCode, setProviderCode] = useState('cdb-brasil-bcb');
+  const [providerCode, setProviderCode] = useState(DEFAULT_PROVIDER_CODE);
   const [productType, setProductType] = useState<ProductType>('CDB');
   const [kind, setKind] = useState<SymbolKind>('CDI');
   const [rate, setRate] = useState('');
