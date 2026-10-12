@@ -21,6 +21,23 @@ interface CalcResult {
   note: string;
 }
 
+/**
+ * Friendly canonical symbol derived from the product name — the same idea
+ * the Wealthfolio UI applied to manually created assets (e.g.
+ * CDB-BANCOC-HELIXLQDIARIA). Accents stripped, uppercase alphanumerics
+ * only, at most one hyphen (the strict activity-symbol regex allows two).
+ */
+export function canonicalFromName(name: string): string {
+  const slug = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '')
+    .slice(0, 60);
+  if (!slug) return '';
+  return slug.startsWith('CDB') ? slug : `CDB-${slug}`;
+}
+
 const field =
   'w-full rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring';
 const labelCls = 'mb-1 block text-xs font-medium text-muted-foreground';
@@ -68,10 +85,15 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
   }, [ctx]);
 
   const canonical = useMemo(() => {
+    // Friendly code from the product name when given (e.g. "Banco C Exclusivo
+    // Pós-fixado 1 ano" -> CDB-C6EXCLUSIVOPOSFIXADO1ANO); falls back to the
+    // bank+rate scheme when only the bank is filled.
+    const fromName = canonicalFromName(name);
+    if (fromName) return fromName;
     const slug = bank.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     const r = parseFloat(rate);
     return slug && r ? `CDB-${slug}-${Math.round(r * 100)}` : '';
-  }, [bank, rate]);
+  }, [name, bank, rate]);
 
   async function calculate(): Promise<void> {
     setError('');
@@ -297,14 +319,19 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
             </div>
           )}
 
+          <div>
+            <label className={labelCls}>Nome do ativo (vira o código e o nome da security — ex.: Banco C Exclusivo Pós-fixado 1 ano)</label>
+            <input className={field} placeholder="Banco C Exclusivo Pós-fixado 1 ano" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Provider custom (Market Data)</label>
               <input className={field} value={providerCode} onChange={(e) => setProviderCode(e.target.value)} />
             </div>
             <div>
-              <label className={labelCls}>Nome do ativo (opcional)</label>
-              <input className={field} placeholder="CDB Banco C 100% CDI" value={name} onChange={(e) => setName(e.target.value)} />
+              <label className={labelCls}>Banco (fallback do código)</label>
+              <input className={field} placeholder="Banco C" value={bank} onChange={(e) => setBank(e.target.value)} />
             </div>
           </div>
 

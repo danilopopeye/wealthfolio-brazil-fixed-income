@@ -74,6 +74,10 @@ export async function createCdb(input: CreateCdbInput): Promise<CreateCdbResult>
     // The backend struct requires `notes` (non-optional String); omitting
     // it fails deserialization with 422 Unprocessable Entity.
     notes: '',
+    // AssetResolutionInput.name is not honored by the activity-creation
+    // path (assets end up named by a generated UUID); the profile update is
+    // the reliable place to set it.
+    name,
     providerConfig: {
       custom_provider_code: providerCode,
       preferred_provider: 'CUSTOM_SCRAPER',
