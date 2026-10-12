@@ -107,6 +107,9 @@ Nem todo app informa a emissão; há três situações (todas cobertas pelo assi
 | Fixtures de janela curta (≤ 2 meses) | 1e-6 por PU | — | as 4 leituras reais do bootstrap |
 | Prefixado, qualquer janela | centavos | arredondamento de exibição do banco | PRE 14,80% desde 17/04: **R$ 0,01** |
 | Pós-fixado, janela longa | ~0,01% relativo | arredondamento acumulado da série 12 (~0,2 ppm/dia × N dias úteis; o banco usa o fator interno não arredondado) | CDI 109,70% desde 06/02 (172 dias úteis): **R$ 1,05 = 0,005% = 0,085 dias de CDI** |
+| LCI %CDI | idem pós-fixado | idem | LCI 98% desde 06/03: **R$ 0,08 = 0,00007%** — o melhor resultado do projeto |
+
+**Nota de escopo** (12/10/2026): o bootstrap colocava LCI/LCA fora de escopo, mas a matemática de pós-fixado %CDI é idêntica — a LCI acima foi validada em produção com o resíduo mais baixo do projeto. O assistente suporta CDB e LCI (`TYPE-SLUG` no código canônico); LCA deve funcionar pela mesma via quando surgir `[hipótese]`.
 
 **Regra de bolso para diagnosticar diferenças**: converter a diferença em "dias de CDI" (`diferença % ÷ (0,0508 × %CDI/100)`). Fração de dia = ruído da fonte (acima). Dia inteiro = convenção de início (D vs D+1). 2–5 dias = defasagem de exibição do app (nosso valor é o mais novo). Valor estranho = taxa contratada ou emissão derivada torta.
 
