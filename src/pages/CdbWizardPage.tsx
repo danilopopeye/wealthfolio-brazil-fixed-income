@@ -179,15 +179,19 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
       });
       await ctx.api.storage.set(PROVIDER_CODE_KEY, code).catch(() => undefined);
 
-      // Validate the wiring right away: the sync above should have produced
-      // at least one quote. An empty history means the provider code or the
-      // override symbol is wrong (position exists but will never price).
-      let priced = true;
-      try {
-        const history = await ctx.api.quotes.getHistory(assetId);
-        priced = Array.isArray(history) && history.length > 0;
-      } catch {
-        priced = false;
+      // Validate the wiring: the market sync above is asynchronous, so poll
+      // briefly for the first quote before warning. An empty history after
+      // the retries means the provider code or the override symbol is wrong
+      // (position exists but will never price).
+      let priced = false;
+      for (let attempt = 0; attempt < 4 && !priced; attempt++) {
+        if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 1500));
+        try {
+          const history = await ctx.api.quotes.getHistory(assetId);
+          priced = Array.isArray(history) && history.length > 0;
+        } catch {
+          priced = false;
+        }
       }
       const expected = result.grossToday.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
       setSuccess(
