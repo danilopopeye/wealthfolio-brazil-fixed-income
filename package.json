@@ -1,14 +1,24 @@
 {
-  "name": "wealthfolio-cdb-addon",
+  "name": "wealthfolio-renda-fixa-addon",
   "version": "1.6.1",
-  "description": "A Wealthfolio addon for cdb",
+  "description": "Wealthfolio addon for Brazilian fixed income: registers CDB, LCI, LCA and LCDA titles (%CDI and pre-fixed) with PU computed from the BCB CDI series",
   "type": "module",
   "main": "dist/addon.js",
   "keywords": [
     "wealthfolio",
-    "addon"
+    "addon",
+    "brazil",
+    "fixed-income",
+    "cdi",
+    "cdb",
+    "lci"
   ],
   "license": "MIT",
+  "author": "Danilo",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch",
