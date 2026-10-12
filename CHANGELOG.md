@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-10-13
+
+### Security
+- Override source-map-js to ^1.2.2 (Dependabot high: event-loop denial of
+  service through indexed source-map section offsets). Development-scope
+  transitive tooling only (tailwind node, postcss, vite) — no runtime impact
+  on the addon bundle
+
 ## [1.7.0] - 2026-10-12
 
 ### Added
