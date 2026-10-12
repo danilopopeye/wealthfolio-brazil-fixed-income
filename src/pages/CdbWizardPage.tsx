@@ -23,19 +23,22 @@ interface CalcResult {
 
 /**
  * Friendly canonical symbol derived from the product name — the same idea
- * the Wealthfolio UI applied to manually created assets (e.g.
- * CDB-BANCOC-HELIXLQDIARIA). Accents stripped, uppercase alphanumerics
- * only, at most one hyphen (the strict activity-symbol regex allows two).
+ * the Wealthfolio UI applied to manually created assets. Standard format:
+ * CDB-<slug>, with a leading "CDB" in the name trimmed so it never
+ * duplicates ("CDB Banco C…" → CDB-C6HELIX…, "Banco C Exclusivo…" →
+ * CDB-C6EXCLUSIVO…). Accents stripped, uppercase alphanumerics only, one
+ * hyphen (the strict activity-symbol regex allows two).
  */
 export function canonicalFromName(name: string): string {
-  const slug = name
+  let slug = name
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, '')
     .slice(0, 60);
+  if (slug.startsWith('CDB')) slug = slug.slice(3);
   if (!slug) return '';
-  return slug.startsWith('CDB') ? slug : `CDB-${slug}`;
+  return `CDB-${slug}`;
 }
 
 const field =
