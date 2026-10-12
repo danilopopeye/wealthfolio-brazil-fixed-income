@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write # OIDC identity for signing build provenance
+  attestations: write # persist the attestation on the repo
 
 jobs:
   release:
@@ -55,6 +57,14 @@ jobs:
         run: |
           mkdir -p release
           cp dist/*.zip release/
+
+      # Sign a SLSA provenance statement for the zip so anyone can verify it
+      # was built by this workflow:
+      #   gh attestation verify <zip> --repo danilopopeye/wealthfolio-brazil-fixed-income
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: release/*.zip
 
       # Release notes come straight from the curated CHANGELOG.md section —
       # no third-party actions. The guard fails the release when the
