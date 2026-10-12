@@ -1,6 +1,6 @@
 {
   "name": "wealthfolio-cdb-addon",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "A Wealthfolio addon for cdb",
   "type": "module",
   "main": "dist/addon.js",

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { AddonContext } from '@wealthfolio/addon-sdk';
+import { useAddonTranslation, type AddonContext } from '@wealthfolio/addon-sdk';
 import { Card, CardContent } from '@wealthfolio/ui';
 import { fetchCdiSeries } from '../lib/cdi-source';
 import { buildSymbol, solveEmission, unitPrice, type RateMap, type SymbolKind, type TitleSpec } from '../lib/engine';
@@ -55,6 +55,9 @@ const field =
 const labelCls = 'mb-1 block text-xs font-medium text-muted-foreground';
 
 export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
+  const { t, language } = useAddonTranslation();
+  const locale = language === 'pt' ? 'pt-BR' : 'en-US';
+  const fmtDate = (iso: string) => (language === 'pt' ? iso.split('-').reverse().join('/') : iso);
   const [accounts, setAccounts] = useState<{ id: string; name: string }[]>([]);
   const [accountId, setAccountId] = useState('');
   const [providerCode, setProviderCode] = useState('cdb-brasil-bcb');
@@ -84,7 +87,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         setAccounts(list);
         if (list.length > 0) setAccountId((current) => current || list[0].id);
       })
-      .catch((e) => setError(`Não consegui listar as contas: ${e}`));
+      .catch((e) => setError(t('err.accounts', { error: String(e) })));
     // Remember the last custom provider code used (the SDK cannot enumerate
     // individual custom providers — market.getProviders only exposes the
     // aggregate CUSTOM_SCRAPER entry).
@@ -105,15 +108,15 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
     const r = parseFloat(rate);
     const value = parseFloat(invested);
     if (!name.trim()) {
-      setError('Preencha o nome do ativo (vira o código e o nome da security).');
+      setError(t('err.needName'));
       return;
     }
     if (!r || !buyDate || !value) {
-      setError('Preencha taxa, data da compra e valor aplicado.');
+      setError(t('err.needBase'));
       return;
     }
     if (mode === 'manual' && !emission) {
-      setError('Preencha a data de emissão, ou escolha outro modo.');
+      setError(t('err.needEmission'));
       return;
     }
     setBusy(true);
@@ -128,7 +131,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         const em = nextDay ? nextBusinessDay(buyDate) : buyDate;
         spec = { kind, ratePct: r, emission: em };
         pu = 1000;
-        note = 'título novo: PU de emissão 1000';
+        note = t('note.direct');
       } else if (mode === 'pu') {
         let target = parseFloat(puPaid);
         if (!target) {
@@ -136,7 +139,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
           if (q) target = value / q;
         }
         if (!target) {
-          throw new Error('Informe o PU pago ou a quantidade de títulos.');
+          throw new Error(t('err.needPu'));
         }
         const settlement = nextBusinessDay(buyDate);
         const from = new Date(Date.UTC(Number(settlement.slice(0, 4)) - 15, Number(settlement.slice(5, 7)) - 1, Number(settlement.slice(8, 10))))
@@ -148,8 +151,9 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         const solved = solveEmission(kind, r, target, settlement, rates);
         spec = { kind, ratePct: r, emission: solved.emission };
         pu = target;
-        const quality = Math.abs(solved.diff) < 0.005 ? 'exata' : Math.abs(solved.diff) < 1 ? 'boa' : 'fraca — confira taxa e PU';
-        note = `emissão descoberta de trás pra frente (precisão ${quality})`;
+        const quality =
+          Math.abs(solved.diff) < 0.005 ? t('quality.exact') : Math.abs(solved.diff) < 1 ? t('quality.good') : t('quality.poor');
+        note = t('note.solved', { quality });
       } else {
         spec = { kind, ratePct: r, emission };
         pu = NaN;
@@ -166,7 +170,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         // Manual mode: PU paid = PU of the settlement date (D+1).
         const settle = nextBusinessDay(buyDate);
         pu = unitPrice(spec, settle, rates).price;
-        note = `PU do dia útil seguinte (${settle})`;
+        note = t('note.settlement', { date: settle });
       }
 
       const current = unitPrice(spec, today, rates);
@@ -189,7 +193,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
 
   async function submit(): Promise<void> {
     if (!result || !accountId) {
-      setError('Calcule primeiro e selecione a conta.');
+      setError(t('err.needCalc'));
       return;
     }
     setBusy(true);
@@ -224,11 +228,11 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
           priced = false;
         }
       }
-      const expected = result.grossToday.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      const expected = result.grossToday.toLocaleString(locale, { style: 'currency', currency: 'BRL' });
       setSuccess(
         priced
-          ? `CDB cadastrado e precificado: ${result.canonical}. Posição esperada: ${expected}`
-          : `CDB cadastrado (${result.canonical}), mas nenhum preço chegou — confira o código do provider "${code}" e o override ${result.overrideSymbol} na aba Market Data do ativo.`
+          ? t('ok.created', { type: productType, symbol: result.canonical, value: expected })
+          : t('ok.notPriced', { type: productType, symbol: result.canonical, provider: code, override: result.overrideSymbol })
       );
       setResult(null);
     } catch (e) {
@@ -241,9 +245,9 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-6">
       <div>
-        <h1 className="text-2xl font-semibold">Cadastro de Renda Fixa</h1>
+        <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <p className="text-sm text-muted-foreground">
-          Calcula o PU pela série do CDI do Banco Central e cria a security + compra direto no Wealthfolio.
+          {t('subtitle')}
         </p>
       </div>
 
@@ -251,7 +255,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         <CardContent className="space-y-3 p-4">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <div>
-              <label className={labelCls}>Conta</label>
+              <label className={labelCls}>{t('account')}</label>
               <select className={field} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -261,7 +265,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
               </select>
             </div>
             <div>
-              <label className={labelCls}>Tipo</label>
+              <label className={labelCls}>{t('type')}</label>
               <select className={field} value={productType} onChange={(e) => setProductType(e.target.value as ProductType)}>
                 <option value="CDB">CDB</option>
                 <option value="LCI">LCI</option>
@@ -270,74 +274,74 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
               </select>
             </div>
             <div>
-              <label className={labelCls}>Indexador</label>
+              <label className={labelCls}>{t('indexer')}</label>
               <select className={field} value={kind} onChange={(e) => setKind(e.target.value as SymbolKind)}>
-                <option value="CDI">% do CDI</option>
-                <option value="PRE">% a.a. (prefixado)</option>
+                <option value="CDI">{t('indexer.cdi')}</option>
+                <option value="PRE">{t('indexer.pre')}</option>
               </select>
             </div>
             <div>
-              <label className={labelCls}>Taxa contratada</label>
+              <label className={labelCls}>{t('rate')}</label>
               <input className={field} type="number" step="0.01" placeholder="100" value={rate} onChange={(e) => setRate(e.target.value)} />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <div>
-              <label className={labelCls}>Como você aplicou?</label>
+              <label className={labelCls}>{t('mode')}</label>
               <select className={field} value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
-                <option value="direct">Direto no banco (título novo)</option>
-                <option value="pu">Título existente — sei o PU/quantidade</option>
-                <option value="manual">Sei a data de emissão</option>
+                <option value="direct">{t('mode.direct')}</option>
+                <option value="pu">{t('mode.pu')}</option>
+                <option value="manual">{t('mode.manual')}</option>
               </select>
             </div>
             <div>
-              <label className={labelCls}>Data da compra</label>
+              <label className={labelCls}>{t('buyDate')}</label>
               <input className={field} type="date" value={buyDate} onChange={(e) => setBuyDate(e.target.value)} />
             </div>
             <div>
-              <label className={labelCls}>Valor aplicado (R$)</label>
+              <label className={labelCls}>{t('invested')}</label>
               <input className={field} type="number" step="0.01" placeholder="5000.00" value={invested} onChange={(e) => setInvested(e.target.value)} />
             </div>
           </div>
 
           <div>
-            <label className={labelCls}>Data de vencimento (opcional — cadastra o ativo como Bond, tipo correto de renda fixa)</label>
+            <label className={labelCls}>{t('maturity')}</label>
             <input className={field} type="date" value={maturityDate} onChange={(e) => setMaturityDate(e.target.value)} />
           </div>
 
           {mode === 'manual' && (
             <div>
-              <label className={labelCls}>Data de emissão</label>
+              <label className={labelCls}>{t('emission')}</label>
               <input className={field} type="date" value={emission} onChange={(e) => setEmission(e.target.value)} />
             </div>
           )}
           {mode === 'direct' && (
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input type="checkbox" checked={nextDay} onChange={(e) => setNextDay(e.target.checked)} />
-              Minha aplicação começa a render só no dia útil seguinte
+              {t('nextDay')}
             </label>
           )}
           {mode === 'pu' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>PU pago (se souber)</label>
+                <label className={labelCls}>{t('puPaid')}</label>
                 <input className={field} type="number" step="0.00000001" placeholder="1023.61" value={puPaid} onChange={(e) => setPuPaid(e.target.value)} />
               </div>
               <div>
-                <label className={labelCls}>…ou quantidade de títulos</label>
+                <label className={labelCls}>{t('qtyPaid')}</label>
                 <input className={field} type="number" step="0.00001" placeholder="4.88191" value={qtyPaid} onChange={(e) => setQtyPaid(e.target.value)} />
               </div>
             </div>
           )}
 
           <div>
-            <label className={labelCls}>Nome do ativo (vira o código e o nome da security — ex.: Banco C Exclusivo Pós-fixado 1 ano)</label>
+            <label className={labelCls}>{t('assetName')}</label>
             <input className={field} placeholder="Banco C Exclusivo Pós-fixado 1 ano" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
 
           <div>
-            <label className={labelCls}>Provider custom (Market Data)</label>
+            <label className={labelCls}>{t('providerCode')}</label>
             <input className={field} value={providerCode} onChange={(e) => setProviderCode(e.target.value)} />
           </div>
 
@@ -347,7 +351,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
             onClick={() => void calculate()}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
           >
-            {busy ? 'Calculando…' : 'Calcular'}
+            {busy ? t('calculating') : t('calc')}
           </button>
         </CardContent>
       </Card>
@@ -367,32 +371,32 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         <Card>
           <CardContent className="space-y-2 p-4 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Symbol canônico</span>
+              <span className="text-muted-foreground">{t('result.canonical')}</span>
               <code className="font-mono">{result.canonical}</code>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Override do provider</span>
+              <span className="text-muted-foreground">{t('result.override')}</span>
               <code className="font-mono">{result.overrideSymbol}</code>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Emissão</span>
-              <span>{result.emission.split('-').reverse().join('/')}</span>
+              <span className="text-muted-foreground">{t('result.emission')}</span>
+              <span>{fmtDate(result.emission)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Tipo do ativo</span>
-              <span>{maturityDate ? `Bond · vencimento ${maturityDate.split('-').reverse().join('/')}` : 'Equity'}</span>
+              <span className="text-muted-foreground">{t('result.assetType')}</span>
+              <span>{maturityDate ? t('result.bond', { date: fmtDate(maturityDate) }) : t('result.equity')}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">PU pago</span>
-              <span>{result.pu.toLocaleString('pt-BR', { maximumFractionDigits: 8 })}</span>
+              <span className="text-muted-foreground">{t('result.pu')}</span>
+              <span>{result.pu.toLocaleString(locale, { maximumFractionDigits: 8 })}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Quantidade de títulos</span>
+              <span className="text-muted-foreground">{t('result.qty')}</span>
               <span>{result.quantity.toFixed(5)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Valor bruto hoje (estimado)</span>
-              <span>{result.grossToday.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+              <span className="text-muted-foreground">{t('result.gross')}</span>
+              <span>{result.grossToday.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}</span>
             </div>
             <p className="text-xs text-muted-foreground">{result.note}</p>
             <button
@@ -401,7 +405,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
               onClick={() => void submit()}
               className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {busy ? 'Criando…' : 'Cadastrar no Wealthfolio'}
+              {busy ? t('creating') : t('create')}
             </button>
           </CardContent>
         </Card>

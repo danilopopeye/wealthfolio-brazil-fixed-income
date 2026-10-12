@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { AddonContext, AddonEnableFunction } from '@wealthfolio/addon-sdk';
+import { registerTranslations, type AddonContext, type AddonEnableFunction } from '@wealthfolio/addon-sdk';
 import { CdbWizardPage } from './pages/CdbWizardPage';
+import { translations } from './lib/translations';
 
 // The host owns a single React root per addon and mounts the route `component`
 // itself (`createElement(Component, { location })`) with no access to the addon
@@ -21,6 +22,10 @@ const AddonRoute = () => (
 
 const enable: AddonEnableFunction = (ctx) => {
   addonCtx = ctx;
+
+  // Translations must be registered before the first render; the language
+  // follows the host setting and the hook re-renders on change.
+  registerTranslations(translations);
 
   // The route `id` MUST match `contributes.routes[].id` in manifest.json.
   // The host derives this root path from the manifest addon id.
