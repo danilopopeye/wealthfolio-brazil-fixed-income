@@ -59,6 +59,9 @@ export async function createCdb(input: CreateCdbInput): Promise<CreateCdbResult>
 
   await ctx.api.assets.updateProfile({
     id: assetId,
+    // The backend struct requires `notes` (non-optional String); omitting
+    // it fails deserialization with 422 Unprocessable Entity.
+    notes: '',
     providerConfig: {
       custom_provider_code: providerCode,
       preferred_provider: 'CUSTOM_SCRAPER',
