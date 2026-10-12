@@ -20,6 +20,11 @@ export interface CreateCdbInput {
   buyDate: string;
   quantity: number;
   unitPrice: number;
+  /** Maturity date (YYYY-MM-DD). When present the asset is registered as a
+   *  Bond (correct type for renda fixa) with its spec — face value 1000,
+   *  zero coupon — and the provider override under both resolver keys, so
+   *  the custom provider still receives an equity symbol. */
+  maturityDate?: string;
 }
 
 export interface CreateCdbResult {
@@ -27,7 +32,8 @@ export interface CreateCdbResult {
 }
 
 export async function createCdb(input: CreateCdbInput): Promise<CreateCdbResult> {
-  const { ctx, accountId, providerCode, symbol, name, overrideSymbol, buyDate, quantity, unitPrice } = input;
+  const { ctx, accountId, providerCode, symbol, name, overrideSymbol, buyDate, quantity, unitPrice, maturityDate } = input;
+  const instrumentType = maturityDate ? 'BOND' : 'EQUITY';
 
   const activity = await ctx.api.activities.create({
     accountId,
@@ -43,7 +49,7 @@ export async function createCdb(input: CreateCdbInput): Promise<CreateCdbResult>
     asset: {
       symbol,
       name,
-      instrumentType: 'EQUITY',
+      instrumentType,
       quoteCcy: 'BRL',
       quoteMode: 'MARKET',
     },
@@ -57,7 +63,13 @@ export async function createCdb(input: CreateCdbInput): Promise<CreateCdbResult>
     );
   }
 
-  await ctx.api.assets.updateProfile({
+  // The SDK type omits metadata, but both adapters pass the payload through
+  // verbatim and the backend UpdateAssetProfile accepts it (BondSpec lives
+  // in Asset.metadata["bond"]).
+  type ProfileUpdate = Parameters<typeof ctx.api.assets.updateProfile>[0] & {
+    metadata?: Record<string, unknown>;
+  };
+  const profile: ProfileUpdate = {
     id: assetId,
     // The backend struct requires `notes` (non-optional String); omitting
     // it fails deserialization with 422 Unprocessable Entity.
@@ -66,10 +78,26 @@ export async function createCdb(input: CreateCdbInput): Promise<CreateCdbResult>
       custom_provider_code: providerCode,
       preferred_provider: 'CUSTOM_SCRAPER',
       overrides: {
+        // The resolver chain looks the override up by the provider id
+        // ("CUSTOM_SCRAPER") — this key makes a Bond-typed asset resolve to
+        // an equity symbol before reaching the custom provider.
+        CUSTOM_SCRAPER: { symbol: overrideSymbol, type: 'equity_symbol' },
+        // The custom scraper itself swaps the symbol via this per-source key.
         [`CUSTOM:${providerCode}`]: { symbol: overrideSymbol, type: 'equity_symbol' },
       },
     },
-  });
+  };
+  if (maturityDate) {
+    profile.metadata = {
+      bond: {
+        maturityDate,
+        faceValue: 1000,
+        // No coupon field: CDBs accrue to maturity (zero-coupon, the
+        // backend default).
+      },
+    };
+  }
+  await ctx.api.assets.updateProfile(profile);
 
   // Best effort: price it right away so the position shows immediately.
   await ctx.api.market.sync([assetId], false).catch(() => undefined);

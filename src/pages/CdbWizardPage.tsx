@@ -39,6 +39,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
   const [qtyPaid, setQtyPaid] = useState('');
   const [buyDate, setBuyDate] = useState('');
   const [invested, setInvested] = useState('');
+  const [maturityDate, setMaturityDate] = useState('');
   const [name, setName] = useState('');
 
   const [result, setResult] = useState<CalcResult | null>(null);
@@ -176,6 +177,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         buyDate,
         quantity: result.quantity,
         unitPrice: result.pu,
+        maturityDate: maturityDate || undefined,
       });
       await ctx.api.storage.set(PROVIDER_CODE_KEY, code).catch(() => undefined);
 
@@ -265,6 +267,11 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
             </div>
           </div>
 
+          <div>
+            <label className={labelCls}>Data de vencimento (opcional — cadastra o ativo como Bond, tipo correto de renda fixa)</label>
+            <input className={field} type="date" value={maturityDate} onChange={(e) => setMaturityDate(e.target.value)} />
+          </div>
+
           {mode === 'manual' && (
             <div>
               <label className={labelCls}>Data de emissão</label>
@@ -337,6 +344,10 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Emissão</span>
               <span>{result.emission.split('-').reverse().join('/')}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Tipo do ativo</span>
+              <span>{maturityDate ? `Bond · vencimento ${maturityDate.split('-').reverse().join('/')}` : 'Equity'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">PU pago</span>
