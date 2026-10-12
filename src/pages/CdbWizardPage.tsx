@@ -51,7 +51,6 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
   const [providerCode, setProviderCode] = useState('cdb-brasil-bcb');
   const [kind, setKind] = useState<SymbolKind>('CDI');
   const [rate, setRate] = useState('');
-  const [bank, setBank] = useState('');
   const [emission, setEmission] = useState('');
   const [mode, setMode] = useState<Mode>('direct');
   const [nextDay, setNextDay] = useState(false);
@@ -87,16 +86,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
       .catch(() => undefined);
   }, [ctx]);
 
-  const canonical = useMemo(() => {
-    // Friendly code from the product name when given (e.g. "Banco C Exclusivo
-    // Pós-fixado 1 ano" -> CDB-C6EXCLUSIVOPOSFIXADO1ANO); falls back to the
-    // bank+rate scheme when only the bank is filled.
-    const fromName = canonicalFromName(name);
-    if (fromName) return fromName;
-    const slug = bank.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const r = parseFloat(rate);
-    return slug && r ? `CDB-${slug}-${Math.round(r * 100)}` : '';
-  }, [name, bank, rate]);
+  const canonical = useMemo(() => canonicalFromName(name), [name]);
 
   async function calculate(): Promise<void> {
     setError('');
@@ -104,6 +94,10 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
     setSuccess('');
     const r = parseFloat(rate);
     const value = parseFloat(invested);
+    if (!name.trim()) {
+      setError('Preencha o nome do ativo (vira o código e o nome da security).');
+      return;
+    }
     if (!r || !buyDate || !value) {
       setError('Preencha taxa, data da compra e valor aplicado.');
       return;
@@ -197,7 +191,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         accountId,
         providerCode: code,
         symbol: result.canonical,
-        name: name.trim() || `${result.canonical} (${result.spec.kind === 'CDI' ? result.spec.ratePct + '% CDI' : result.spec.ratePct + '% a.a.'})`,
+        name: name.trim() || result.canonical,
         overrideSymbol: result.overrideSymbol,
         buyDate,
         quantity: result.quantity,
@@ -267,10 +261,6 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
               <label className={labelCls}>Taxa contratada</label>
               <input className={field} type="number" step="0.01" placeholder="100" value={rate} onChange={(e) => setRate(e.target.value)} />
             </div>
-            <div>
-              <label className={labelCls}>Banco (symbol)</label>
-              <input className={field} placeholder="Banco C" value={bank} onChange={(e) => setBank(e.target.value)} />
-            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -327,15 +317,9 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
             <input className={field} placeholder="Banco C Exclusivo Pós-fixado 1 ano" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Provider custom (Market Data)</label>
-              <input className={field} value={providerCode} onChange={(e) => setProviderCode(e.target.value)} />
-            </div>
-            <div>
-              <label className={labelCls}>Banco (fallback do código)</label>
-              <input className={field} placeholder="Banco C" value={bank} onChange={(e) => setBank(e.target.value)} />
-            </div>
+          <div>
+            <label className={labelCls}>Provider custom (Market Data)</label>
+            <input className={field} value={providerCode} onChange={(e) => setProviderCode(e.target.value)} />
           </div>
 
           <button
