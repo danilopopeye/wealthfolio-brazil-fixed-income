@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>brasil-renda-fixa — market data</title>
+<title>brazil-fixed-income — market data</title>
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96">
@@ -21,11 +21,11 @@
 </style>
 </head>
 <body>
-<h1>brasil-renda-fixa</h1>
+<h1>brazil-fixed-income</h1>
 <p>API de market data para renda fixa brasileira: devolve o <strong>PU</strong> (preço unitário, base R$ 1.000,00 na emissão) de CDB, LCI, LCA e LCDA — pós-fixados (% do CDI) e prefixados (% a.a.), valores brutos. Fonte: <a href="https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&amp;dataInicial=01/01/2024&amp;dataFinal=31/12/2024">série 12 (Taxa de juros — CDI) do SGS/BCB</a>, com cache local.</p>
 
 <h2>Configuração no Wealthfolio (uma única vez)</h2>
-<p>Em <strong>Settings → Market Data</strong>, crie um custom provider com código <code>brasil-renda-fixa</code> e as duas fontes abaixo (troque <code>HOST</code> pelo endereço desta API):</p>
+<p>Em <strong>Settings → Market Data</strong>, crie um custom provider com código <code>brazil-fixed-income</code> e as duas fontes abaixo (troque <code>HOST</code> pelo endereço desta API):</p>
 <table>
   <tr><th>Campo</th><th>Fonte latest</th><th>Fonte historical</th></tr>
   <tr><td>kind</td><td><code>latest</code></td><td><code>historical</code></td></tr>

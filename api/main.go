@@ -1,4 +1,4 @@
-// cdbapi serves unit prices (PU) of Brazilian CDBs to the Wealthfolio
+// fixed-income-api serves unit prices (PU) of Brazilian CDBs to the Wealthfolio
 // custom market data provider. Stateless regarding investments: symbol
 // parameters plus the CDI series become a PU (docs/bootstrap.md).
 package main
@@ -99,7 +99,7 @@ func main() {
 	}
 
 	go func() {
-		logger.Info("cdbapi listening",
+		logger.Info("fixed-income-api listening",
 			"addr", cfg.ListenAddr,
 			"cache", cfg.CachePath,
 			"observations", store.Count(),
@@ -128,7 +128,7 @@ func runHolidaysCheck(fromStr, toStr string) int {
 	from, err1 := time.Parse("2006-01-02", fromStr)
 	to, err2 := time.Parse("2006-01-02", toStr)
 	if err1 != nil || err2 != nil {
-		fmt.Fprintln(os.Stderr, "usage: cdbapi holidays-check -from YYYY-MM-DD -to YYYY-MM-DD")
+		fmt.Fprintln(os.Stderr, "usage: fixed-income-api holidays-check -from YYYY-MM-DD -to YYYY-MM-DD")
 		return 2
 	}
 	cal, err := NewCalendar("")

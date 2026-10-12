@@ -23,6 +23,14 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
 
+  docker:
+    name: Docker image build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build ./api
+
   addon:
     name: Addon (type-check, fixtures, build)
     runs-on: ubuntu-latest
