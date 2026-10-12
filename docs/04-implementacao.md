@@ -11,7 +11,7 @@ Local (requer Go ≥ 1.27):
 ```bash
 cd api && go run .
 # ou
-cd api && go build -o cdbapi . && ./cdbapi
+cd api && go build -o fixed-income-api . && ./fixed-income-api
 ```
 
 Com compose (builda a imagem e sobe com volume de cache e healthcheck):
@@ -59,7 +59,7 @@ Alvos: 1026,9475888 (leitura Banco A 20/09) e 1026,329393 (Banco B 19/09) — re
 
 ```bash
 cd api && go test ./...    # 17 testes: 4 fixtures, parser, calendário, API (auth, clamps, 503, carry)
-./cdbapi holidays-check    # diff do calendário computado vs série 12 real (últimos 3 anos)
+./fixed-income-api holidays-check    # diff do calendário computado vs série 12 real (últimos 3 anos)
 ```
 
 O `holidays-check` é a ferramenta de manutenção do calendário (design D3): imprime `missing obs`/`extra obs` para qualquer divergência entre os feriados computados e o que a série publicou. Foi com ele (na fase de investigação, versão Node) que se descobriu que o carnaval do CDI é seg+ter, com quarta de cinzas útil.

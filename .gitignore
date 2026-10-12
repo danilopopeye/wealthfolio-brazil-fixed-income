@@ -12,6 +12,6 @@ wealthfolio/
 # Go API local artifacts
 cache/
 data/
-api/cdbapi
+api/fixed-income-api
 .env
 api/.env
