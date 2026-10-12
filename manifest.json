@@ -1,8 +1,8 @@
 {
   "id": "cdb",
-  "name": "CDB/LCI Cadastro",
-  "version": "1.4.0",
-  "description": "Assistente de cadastro de CDBs e LCIs brasileiros (% CDI e prefixados) com cálculo de PU pela série do BCB",
+  "name": "Renda Fixa Cadastro",
+  "version": "1.5.0",
+  "description": "Assistente de cadastro de renda fixa brasileira (CDB, LCI, LCA e LCDA; % CDI e prefixados) com cálculo de PU pela série do BCB",
   "author": "Danilo",
   "main": "dist/addon.js",
   "sdkVersion": "3.8.0",
@@ -15,7 +15,7 @@
         {
           "id": "cdb",
           "route": "cdb",
-          "label": "CDB/LCI Cadastro",
+          "label": "Renda Fixa Cadastro",
           "icon": "squares-four",
           "order": 100
         }
