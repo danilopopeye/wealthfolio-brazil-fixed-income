@@ -27,6 +27,11 @@
   "engines": {
     "node": ">=22"
   },
+  "pnpm": {
+    "overrides": {
+      "source-map-js": "^1.2.2"
+    }
+  },
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch",
