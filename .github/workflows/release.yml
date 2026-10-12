@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish addon zip
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        # version comes from the packageManager field in package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".node-version"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Test gate before packaging, so tagged releases never ship a broken
+      # addon: type-check plus the fixture engine (same math as the API).
+      - name: Type-check
+        run: pnpm type-check
+      - name: Test
+        run: pnpm test
+
+      # The manifest is the single source of truth for the addon version;
+      # package.json is synced from it during the bundle step.
+      - name: Check addon version matches tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="v$(node -p "require('./manifest.json').version")"
+          if [ "$version" != "$TAG" ]; then
+            echo "manifest.json version ($version) does not match tag ($TAG)" >&2
+            exit 1
+          fi
+
+      - name: Bundle addon
+        run: pnpm bundle
+
+      # Keep the raw build output out of the release: only the installable
+      # addon zip becomes a downloadable asset.
+      - name: Collect release assets
+        run: |
+          mkdir -p release
+          cp dist/*.zip release/
+
+      # Release notes come straight from the curated CHANGELOG.md section —
+      # no third-party actions. The guard fails the release when the
+      # section is missing, so a tagged version without changelog never
+      # ships with empty notes.
+      - name: Extract changelog section for this version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          awk -v ver="$version" '
+            /^## \[/ { if (flag) exit }
+            $0 ~ "^## \\[" ver "\\]" { flag=1; next }
+            flag { print }
+          ' CHANGELOG.md > release-notes.md
+          test -s release-notes.md || {
+            echo "CHANGELOG.md has no section for [${version}]" >&2
+            exit 1
+          }
+
+      - name: Create release and upload zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file release-notes.md \
+            release/*.zip
