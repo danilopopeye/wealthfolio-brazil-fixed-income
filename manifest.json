@@ -1,8 +1,8 @@
 {
   "id": "cdb",
-  "name": "CDB Cadastro",
-  "version": "1.3.3",
-  "description": "Assistente de cadastro de CDBs brasileiros (% CDI e prefixados) com cálculo de PU pela série do BCB",
+  "name": "CDB/LCI Cadastro",
+  "version": "1.4.0",
+  "description": "Assistente de cadastro de CDBs e LCIs brasileiros (% CDI e prefixados) com cálculo de PU pela série do BCB",
   "author": "Danilo",
   "main": "dist/addon.js",
   "sdkVersion": "3.8.0",
@@ -15,7 +15,7 @@
         {
           "id": "cdb",
           "route": "cdb",
-          "label": "CDB Cadastro",
+          "label": "CDB/LCI Cadastro",
           "icon": "squares-four",
           "order": 100
         }

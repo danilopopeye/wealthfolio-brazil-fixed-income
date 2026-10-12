@@ -24,12 +24,12 @@ interface CalcResult {
 /**
  * Friendly canonical symbol derived from the product name — the same idea
  * the Wealthfolio UI applied to manually created assets. Standard format:
- * CDB-<slug>, with a leading "CDB" in the name trimmed so it never
- * duplicates ("CDB Banco C…" → CDB-C6HELIX…, "Banco C Exclusivo…" →
- * CDB-C6EXCLUSIVO…). Accents stripped, uppercase alphanumerics only, one
- * hyphen (the strict activity-symbol regex allows two).
+ * TYPE-<slug> (TYPE = CDB or LCI), with a leading "CDB"/"LCI" in the name
+ * trimmed so it never duplicates ("LCI Banco D…" + LCI → LCI-BRBBRBBANCODEBRASILIA…
+ * → LCI-BANCOD). Accents stripped, uppercase alphanumerics
+ * only, one hyphen (the strict activity-symbol regex allows two).
  */
-export function canonicalFromName(name: string): string {
+export function canonicalFromName(name: string, productType: 'CDB' | 'LCI' = 'CDB'): string {
   let slug = name
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -37,8 +37,9 @@ export function canonicalFromName(name: string): string {
     .replace(/[^A-Z0-9]+/g, '')
     .slice(0, 60);
   if (slug.startsWith('CDB')) slug = slug.slice(3);
+  else if (slug.startsWith('LCI')) slug = slug.slice(3);
   if (!slug) return '';
-  return `CDB-${slug}`;
+  return `${productType}-${slug}`;
 }
 
 const field =
@@ -49,6 +50,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
   const [accounts, setAccounts] = useState<{ id: string; name: string }[]>([]);
   const [accountId, setAccountId] = useState('');
   const [providerCode, setProviderCode] = useState('cdb-brasil-bcb');
+  const [productType, setProductType] = useState<'CDB' | 'LCI'>('CDB');
   const [kind, setKind] = useState<SymbolKind>('CDI');
   const [rate, setRate] = useState('');
   const [emission, setEmission] = useState('');
@@ -86,7 +88,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
       .catch(() => undefined);
   }, [ctx]);
 
-  const canonical = useMemo(() => canonicalFromName(name), [name]);
+  const canonical = useMemo(() => canonicalFromName(name, productType), [name, productType]);
 
   async function calculate(): Promise<void> {
     setError('');
@@ -231,7 +233,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-6">
       <div>
-        <h1 className="text-2xl font-semibold">Cadastro de CDB</h1>
+        <h1 className="text-2xl font-semibold">Cadastro de CDB/LCI</h1>
         <p className="text-sm text-muted-foreground">
           Calcula o PU pela série do CDI do Banco Central e cria a security + compra direto no Wealthfolio.
         </p>
@@ -248,6 +250,13 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
                     {a.name}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Tipo</label>
+              <select className={field} value={productType} onChange={(e) => setProductType(e.target.value as 'CDB' | 'LCI')}>
+                <option value="CDB">CDB</option>
+                <option value="LCI">LCI</option>
               </select>
             </div>
             <div>
