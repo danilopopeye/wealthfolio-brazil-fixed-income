@@ -65,3 +65,24 @@ func TestSGSRetriesOn500(t *testing.T) {
 		t.Errorf("calls=%d rates=%d, want 2 calls 1 rate", calls, len(rates))
 	}
 }
+
+// Azure Front Door (in front of api.bcb.gov.br) has been observed dropping
+// UA-less requests from datacenter IPs: wget/curl pass while the Go/reqwest
+// defaults (no User-Agent) hang until timeout. The fetcher must identify
+// itself on every request.
+func TestSGSSetsUserAgent(t *testing.T) {
+	var got string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.UserAgent()
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer ts.Close()
+
+	f := NewSGSFetcher(ts.URL, 2*time.Second)
+	if _, err := f.FetchCDI(context.Background(), d("2026-10-07"), d("2026-10-07")); err != nil {
+		t.Fatal(err)
+	}
+	if got != sgsUserAgent {
+		t.Errorf("SGS User-Agent = %q, want %q", got, sgsUserAgent)
+	}
+}

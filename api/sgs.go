@@ -17,6 +17,12 @@ type Fetcher interface {
 
 const defaultSGSBaseURL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.12"
 
+// sgsUserAgent identifies this API to the BCB endpoint. Azure Front Door
+// (the CDN in front of api.bcb.gov.br) has been observed dropping requests
+// from datacenter IPs whose UA/TLS profile looks like a bare HTTP library
+// (Go-http-client, UA-less rustls), while tool UAs (curl, Wget) pass.
+const sgsUserAgent = "brazil-fixed-income-api/1.7 (SGS series 12; +wealthfolio custom provider)"
+
 // SGSFetcher fetches BCB SGS series 12 (daily CDI). Public endpoint, no
 // auth, business days only, values as strings in % a.d. [fixture].
 type SGSFetcher struct {
@@ -119,6 +125,7 @@ func (f *SGSFetcher) fetchWithRetry(ctx context.Context, url string) ([]byte, in
 		if err != nil {
 			return nil, 0, err
 		}
+		req.Header.Set("User-Agent", sgsUserAgent)
 		resp, err := f.client.Do(req)
 		if err != nil {
 			lastErr = fmt.Errorf("SGS request failed: %w", err)

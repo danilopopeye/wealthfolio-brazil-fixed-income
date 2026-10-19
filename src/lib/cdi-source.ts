@@ -4,7 +4,7 @@
  * (SSRF protection), so the addon fetches the public BCB endpoint directly
  * and computes the math client-side (see engine.ts).
  */
-import type { NetworkBroker } from './sgs';
+import { SGS_TIMEOUT_SECS, SGS_USER_AGENT, type BrokerRequest, type NetworkBroker } from './sgs';
 
 export interface SgsObservation {
   date: string; // YYYY-MM-DD
@@ -25,7 +25,12 @@ function addYearsIso(iso: string, years: number): string {
 
 async function fetchRange(network: NetworkBroker, from: string, to: string): Promise<SgsObservation[]> {
   const url = `${SGS_URL}?formato=json&dataInicial=${isoToBrl(from)}&dataFinal=${isoToBrl(to)}`;
-  const response = await network.request({ url, method: 'GET' });
+  const response = await network.request({
+    url,
+    method: 'GET',
+    timeoutSecs: SGS_TIMEOUT_SECS,
+    headers: { 'User-Agent': SGS_USER_AGENT },
+  } as BrokerRequest);
   if (response.status !== 200) {
     throw new Error(`SGS HTTP ${response.status}: ${response.body.slice(0, 120)}`);
   }

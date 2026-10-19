@@ -25,6 +25,15 @@ export interface SgsObservation {
 /** Minimal broker interface, so plain-fetch adapters work outside the sandbox. */
 export type NetworkBroker = Pick<NetworkAPI, 'request'>;
 
+/** The 3.8 SDK types predate this field; the host broker accepts it (max 120). */
+export type BrokerRequest = Parameters<NetworkBroker['request']>[0] & { timeoutSecs?: number };
+
+/** Slow SGS/AFD paths need far more than the broker's 10s default. */
+export const SGS_TIMEOUT_SECS = 120;
+
+/** Identify us to the BCB endpoint: AFD drops bare-library profiles. */
+export const SGS_USER_AGENT = 'brazil-fixed-income-addon/1.7 (SGS series 12; wealthfolio addon)';
+
 /** Converts 'YYYY-MM-DD' to 'DD/MM/YYYY' (format the SGS API expects). */
 export function isoToBrlDate(isoDate: string): string {
   const [year, month, day] = isoDate.split('-');
@@ -56,7 +65,12 @@ export async function fetchSgsSeries(
     `&dataInicial=${isoToBrlDate(params.startDate)}` +
     `&dataFinal=${isoToBrlDate(params.endDate)}`;
 
-  const response = await network.request({ url, method: 'GET' });
+  const response = await network.request({
+    url,
+    method: 'GET',
+    timeoutSecs: SGS_TIMEOUT_SECS,
+    headers: { 'User-Agent': SGS_USER_AGENT },
+  } as BrokerRequest);
 
   if (response.status !== 200) {
     throw new Error(
