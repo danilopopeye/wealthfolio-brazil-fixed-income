@@ -1,6 +1,6 @@
 {
   "name": "wealthfolio-brazil-fixed-income",
-  "version": "1.6.1",
+  "version": "1.7.6",
   "description": "Wealthfolio addon for Brazilian fixed income: registers CDB, LCI, LCA and LCDA titles (%CDI and pre-fixed) with PU computed from the BCB CDI series",
   "type": "module",
   "main": "dist/addon.js",
