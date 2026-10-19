@@ -33,6 +33,11 @@ export const CARRY_FORWARD_MAX = 3;
 export type RateMap = Map<string, number>;
 
 export function postFixedPU(spec: TitleSpec, d: string, rates: RateMap, carryMax = CARRY_FORWARD_MAX): PUResult {
+  // Empty accrual window (valuation at/before emission): PU is the 1000
+  // emission base and no CDI rates are needed — a title bought today with
+  // D+1 settlement is valued at par before it starts accruing.
+  if (d <= spec.emission) return { price: 1000, estimatedDays: 0 };
+
   const lastDate = [...rates.keys()].sort().pop() as string | undefined;
   if (lastDate === undefined) throw new Error('CDI rates unavailable');
 

@@ -150,6 +150,28 @@ func TestFixtureNeonPostFixed(t *testing.T) {
 	}
 }
 
+// A title registered on trade date has its D+1 emission in the future:
+// the accrual window is empty, so PU is the 1000 emission base even when
+// the rate store is completely empty (no rates needed, none fetched).
+func TestFixturePreEmissionPar(t *testing.T) {
+	e := testEngine(t, nil)
+	neon := mustSymbol(t, "CDI-104.50-20260713") // emission 2026-07-13
+
+	for _, d := range []string{"2026-07-12", "2026-07-13"} {
+		day, _ := time.Parse("2006-01-02", d)
+		res, err := e.PU(context.Background(), neon, day)
+		if err != nil {
+			t.Fatalf("PU(%s): %v", d, err)
+		}
+		if diff := res.Price - 1000; diff > tol || diff < -tol {
+			t.Errorf("PU(%s) = %.8f, want 1000", d, res.Price)
+		}
+		if res.EstimatedDays != 0 {
+			t.Errorf("PU(%s): EstimatedDays = %d, want 0", d, res.EstimatedDays)
+		}
+	}
+}
+
 func TestFixtureNeonCarryForward(t *testing.T) {
 	// Cache ending at 2026-09-17 (what series 12 actually served on
 	// Sunday 2026-09-20): the trailing 18/09 must be carried forward.

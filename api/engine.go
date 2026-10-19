@@ -156,6 +156,13 @@ func (e *Engine) preFixed(sym Symbol, d time.Time) PUResult {
 // day k in [emission, d), using confirmed rates; trailing missing days are
 // carried forward up to carryMax (design D2).
 func (e *Engine) postFixed(ctx context.Context, sym Symbol, d time.Time) (PUResult, error) {
+	// Empty accrual window (valuation at/before emission): PU is the 1000
+	// emission base and no CDI rates are needed — a title bought today with
+	// D+1 settlement is valued at par before it starts accruing.
+	if !d.After(sym.Emission) {
+		return PUResult{Price: 1000}, nil
+	}
+
 	e.ensureRates(ctx, sym.Emission)
 
 	last, lastRate, hasAny := e.store.Last()

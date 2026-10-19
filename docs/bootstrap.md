@@ -70,6 +70,7 @@ Re-verificar na versão instalada:
 Hipóteses de partida (validar com fontes e fixtures, não assumir):
 
 - **Contagem de dias:** `n` = dias úteis em `[emissão, D)`. O dia da emissão conta, o dia D não. O PU de sábado ou domingo é o do próximo dia útil.
+- **Janela vazia:** PU em ou antes da emissão = 1000, sem nenhuma taxa de CDI (título D+1 cadastrado na data da compra). `[decisão]` validada por fixture no Go e no check-engine.
 - **Prefixado:** `PU(D) = 1000 × (1 + taxa)^(n/252)`. `[fixture]` confirmado nas duas leituras da Banco B.
 - **Pós-fixado:** `PU(D) = 1000 × Π (1 + pct × ((1 + CDI_k)^(1/252) − 1))`, sobre cada dia útil `k` em `[emissão, D)`. `[hipótese]`: pesquisar a convenção de arredondamento/truncamento do fator diário e qual série do CDI é a correta.
 - **Calendário:** feriados nacionais/ANBIMA (07/09/2026 é feriado). Pesquisar a fonte e como mantê-la atualizada.
