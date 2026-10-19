@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAddonTranslation, type AddonContext } from '@wealthfolio/addon-sdk';
 import { Card, CardContent } from '@wealthfolio/ui';
 import { fetchCdiSeries } from '../lib/cdi-source';
+import { parseDecimal } from '../lib/decimal';
 import { buildSymbol, solveEmission, unitPrice, type RateMap, type SymbolKind, type TitleSpec } from '../lib/engine';
 import { createCdb } from '../lib/createCdb';
 import { nextBusinessDay, todaySaoPaulo } from '../lib/calendar';
@@ -19,6 +20,8 @@ interface CalcResult {
   pu: number;
   quantity: number;
   grossToday: number;
+  /** CDI series was unavailable: no valuation for today, market sync will price. */
+  degraded: boolean;
   note: string;
 }
 
@@ -106,14 +109,18 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
     setError('');
     setResult(null);
     setSuccess('');
-    const r = parseFloat(rate);
-    const value = parseFloat(invested);
+    const r = parseDecimal(rate);
+    const value = parseDecimal(invested);
     if (!name.trim()) {
       setError(t('err.needName'));
       return;
     }
     if (!r || !buyDate || !value) {
-      setError(t('err.needBase'));
+      const missing: string[] = [];
+      if (!r) missing.push(t('field.rate'));
+      if (!buyDate) missing.push(t('field.buyDate'));
+      if (!value) missing.push(t('field.invested'));
+      setError(t('err.needBase', { fields: missing.join(', ') }));
       return;
     }
     if (mode === 'manual' && !emission) {
@@ -134,9 +141,9 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         pu = 1000;
         note = t('note.direct');
       } else if (mode === 'pu') {
-        let target = parseFloat(puPaid);
+        let target = parseDecimal(puPaid);
         if (!target) {
-          const q = parseFloat(qtyPaid);
+          const q = parseDecimal(qtyPaid);
           if (q) target = value / q;
         }
         if (!target) {
@@ -146,8 +153,12 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         const from = new Date(Date.UTC(Number(settlement.slice(0, 4)) - 15, Number(settlement.slice(5, 7)) - 1, Number(settlement.slice(8, 10))))
           .toISOString()
           .slice(0, 10);
-        for (const obs of await fetchCdiSeries(ctx.api.network, from, today)) {
-          rates.set(obs.date, obs.value);
+        // Pre-fixed math is calendar-only; the CDI series is only needed
+        // by the post-fixed solver.
+        if (kind === 'CDI') {
+          for (const obs of await fetchCdiSeries(ctx.api.network, from, today)) {
+            rates.set(obs.date, obs.value);
+          }
         }
         const solved = solveEmission(kind, r, target, settlement, rates);
         spec = { kind, ratePct: r, emission: solved.emission };
@@ -160,11 +171,20 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         pu = NaN;
       }
 
-      // Ensure rates cover [emission, today] for valuation.
+      // Ensure rates cover [emission, today] for valuation (post-fixed only;
+      // pre-fixed PU is calendar-only and needs no CDI at all).
+      let degraded = false;
       const firstCached = [...rates.keys()].sort()[0];
-      if (!firstCached || spec.emission < firstCached) {
-        for (const obs of await fetchCdiSeries(ctx.api.network, spec.emission, today)) {
-          rates.set(obs.date, obs.value);
+      if (kind === 'CDI' && (!firstCached || spec.emission < firstCached)) {
+        try {
+          for (const obs of await fetchCdiSeries(ctx.api.network, spec.emission, today)) {
+            rates.set(obs.date, obs.value);
+          }
+        } catch (e) {
+          // Direct mode is exact without the series (PU at emission = 1000):
+          // register anyway and let the market sync price it later.
+          if (mode !== 'direct') throw e;
+          degraded = true;
         }
       }
       if (Number.isNaN(pu)) {
@@ -174,7 +194,9 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         note = t('note.settlement', { date: settle });
       }
 
-      const current = unitPrice(spec, today, rates);
+      // Degraded (series unavailable): no valuation for today — report the
+      // invested value itself; the market sync will supply the real price.
+      const grossToday = degraded ? value : (value / pu) * unitPrice(spec, today, rates).price;
       setResult({
         spec,
         overrideSymbol: buildSymbol(spec),
@@ -182,8 +204,9 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
         emission: spec.emission,
         pu,
         quantity: value / pu,
-        grossToday: (value / pu) * current.price,
-        note,
+        grossToday,
+        degraded,
+        note: degraded ? `${note} — ${t('note.degraded')}` : note,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -232,7 +255,9 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
       const expected = result.grossToday.toLocaleString(locale, { style: 'currency', currency: 'BRL' });
       setSuccess(
         priced
-          ? t('ok.created', { type: productType, symbol: result.canonical, value: expected })
+          ? result.degraded
+            ? t('ok.createdNoEstimate', { type: productType, symbol: result.canonical })
+            : t('ok.created', { type: productType, symbol: result.canonical, value: expected })
           : t('ok.notPriced', { type: productType, symbol: result.canonical, provider: code, override: result.overrideSymbol })
       );
       setResult(null);
@@ -283,7 +308,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
             </div>
             <div>
               <label className={labelCls}>{t('rate')}</label>
-              <input className={field} type="number" step="0.01" placeholder="100" value={rate} onChange={(e) => setRate(e.target.value)} />
+              <input className={field} type="text" inputMode="decimal" placeholder="100" value={rate} onChange={(e) => setRate(e.target.value)} />
             </div>
           </div>
 
@@ -302,7 +327,7 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
             </div>
             <div>
               <label className={labelCls}>{t('invested')}</label>
-              <input className={field} type="number" step="0.01" placeholder="5000.00" value={invested} onChange={(e) => setInvested(e.target.value)} />
+              <input className={field} type="text" inputMode="decimal" placeholder="5000" value={invested} onChange={(e) => setInvested(e.target.value)} />
             </div>
           </div>
 
@@ -327,11 +352,11 @@ export function CdbWizardPage({ ctx }: { ctx: AddonContext }) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>{t('puPaid')}</label>
-                <input className={field} type="number" step="0.00000001" placeholder="1023.61" value={puPaid} onChange={(e) => setPuPaid(e.target.value)} />
+                <input className={field} type="text" inputMode="decimal" placeholder="1023.61" value={puPaid} onChange={(e) => setPuPaid(e.target.value)} />
               </div>
               <div>
                 <label className={labelCls}>{t('qtyPaid')}</label>
-                <input className={field} type="number" step="0.00001" placeholder="4.88191" value={qtyPaid} onChange={(e) => setQtyPaid(e.target.value)} />
+                <input className={field} type="text" inputMode="decimal" placeholder="4.88191" value={qtyPaid} onChange={(e) => setQtyPaid(e.target.value)} />
               </div>
             </div>
           )}

@@ -7,6 +7,7 @@
  */
 import { businessDaysBetween, prevBusinessDay } from '../src/lib/calendar';
 import { postFixedPU, preFixedPU, solveEmission, buildSymbol, type RateMap } from '../src/lib/engine';
+import { parseDecimal } from '../src/lib/decimal';
 
 const TOL = 1e-6;
 
@@ -108,6 +109,23 @@ if (carried.estimatedDays !== 1) {
 check('Banco B PU 2026-09-14', preFixedPU(xp, '2026-09-14').price, 1023.611264);
 check('Banco B PU 2026-09-19', preFixedPU(xp, '2026-09-19').price, 1026.329393);
 
+// Valuation at/before emission with an EMPTY rate map: a title bought today
+// (D+1 emission in the future) has an empty accrual window, so PU is the
+// 1000 emission base and no CDI rates are required.
+for (const [label, d] of [['before emission', '2026-07-12'], ['at emission', '2026-07-13']] as const) {
+  try {
+    const pu = postFixedPU(neon, d, new Map());
+    check(`PU ${label} (no rates)`, pu.price, 1000);
+    if (pu.estimatedDays !== 0) {
+      failures++;
+      console.log(`FAIL  PU ${label} (no rates): estimatedDays ${pu.estimatedDays} != 0`);
+    }
+  } catch (e) {
+    failures++;
+    console.log(`FAIL  PU ${label} (no rates): threw ${(e as Error).message}`);
+  }
+}
+
 // Solver inversion (8 and 2 decimal inputs).
 const solved8 = solveEmission('CDI', 104.5, 1024.19875526, '2026-09-14', rates(true));
 const solved2 = solveEmission('CDI', 104.5, 1024.2, '2026-09-14', rates(true));
@@ -128,6 +146,29 @@ if (sym !== 'CDI-104.50-20260713') {
   console.log(`FAIL  buildSymbol -> ${sym}`);
 } else {
   console.log('PASS  buildSymbol -> CDI-104.50-20260713');
+}
+
+// Locale-tolerant decimal parsing (user-typed values with , or .).
+{
+  const cases: [string, number][] = [
+    ['104,5', 104.5],
+    ['1.045,32', 1045.32],
+    ['1,045.32', 1045.32],
+    ['104.5', 104.5],
+    ['5000', 5000],
+    [' 1 023,61 ', 1023.61],
+  ];
+  for (const [raw, want] of cases) {
+    check(`parseDecimal(${JSON.stringify(raw)})`, parseDecimal(raw), want);
+  }
+  for (const bad of ['', '  ', 'abc']) {
+    if (!Number.isNaN(parseDecimal(bad))) {
+      failures++;
+      console.log(`FAIL  parseDecimal(${JSON.stringify(bad)}) should be NaN`);
+    } else {
+      console.log(`PASS  parseDecimal(${JSON.stringify(bad)}) = NaN`);
+    }
+  }
 }
 
 if (failures > 0) {
