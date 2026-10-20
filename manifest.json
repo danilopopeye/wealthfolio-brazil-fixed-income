@@ -1,7 +1,7 @@
 {
   "id": "cdb",
   "name": "Cadastro Renda Fixa",
-  "version": "1.7.6",
+  "version": "1.8.0",
   "description": "Assistente de cadastro de renda fixa brasileira (CDB, LCI, LCA e LCDA; % CDI e prefixados) com cálculo de PU pela série do BCB",
   "author": "Danilo",
   "main": "dist/addon.js",
@@ -45,8 +45,16 @@
     },
     {
       "category": "assets",
-      "functions": [{ "name": "updateProfile", "isDeclared": true }],
-      "purpose": "Configurar o custom provider de market data do ativo (symbol override)"
+      "functions": [
+        { "name": "updateProfile", "isDeclared": true },
+        { "name": "getProfile", "isDeclared": true }
+      ],
+      "purpose": "Configurar o custom provider de market data do ativo (symbol override) e ler o override para recuperar a parametrização do título (aplicação adicional)"
+    },
+    {
+      "category": "portfolio",
+      "functions": [{ "name": "getHoldings", "isDeclared": true }],
+      "purpose": "Listar as posições da conta para oferecer aplicação adicional em título existente"
     },
     {
       "category": "market-data",

@@ -121,3 +121,22 @@ export function solveEmission(
 export function buildSymbol(spec: TitleSpec): string {
   return `${spec.kind}-${spec.ratePct.toFixed(2)}-${spec.emission.split('-').join('')}`;
 }
+
+const SYMBOL_RE = /^(CDI|PRE)-(\d+(?:\.\d+)?)-(\d{8})$/;
+
+/** Inverse of buildSymbol: recovers the spec from a parametrized symbol —
+ *  how the wizard re-derives the PU curve of titles created before spec
+ *  persistence existed (from the asset's provider override). Returns null
+ *  for anything that is not one of ours (foreign symbols, manual assets). */
+export function parseSymbol(code: string): TitleSpec | null {
+  const m = SYMBOL_RE.exec(code.trim().toUpperCase());
+  if (!m) return null;
+  const ratePct = Number(m[2]);
+  if (!(ratePct > 0)) return null;
+  const raw = m[3];
+  return {
+    kind: m[1] as SymbolKind,
+    ratePct,
+    emission: `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`,
+  };
+}

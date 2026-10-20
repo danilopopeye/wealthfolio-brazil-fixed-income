@@ -5,6 +5,7 @@
  * ISO string — no manual date field, no MM/DD trap.
  */
 import type { AddonContext } from '@wealthfolio/addon-sdk';
+import type { TitleSpec } from './engine';
 
 export interface CreateCdbInput {
   ctx: AddonContext;
@@ -25,6 +26,10 @@ export interface CreateCdbInput {
    *  zero coupon — and the provider override under both resolver keys, so
    *  the custom provider still receives an equity symbol. */
   maturityDate?: string;
+  /** Parametrization of the title, persisted in addon storage so
+   *  "aplicação adicional" can rebuild the PU curve without re-deriving it
+   *  from the provider override. */
+  spec: TitleSpec;
 }
 
 export interface CreateCdbResult {
@@ -32,7 +37,7 @@ export interface CreateCdbResult {
 }
 
 export async function createCdb(input: CreateCdbInput): Promise<CreateCdbResult> {
-  const { ctx, accountId, providerCode, symbol, name, overrideSymbol, buyDate, quantity, unitPrice, maturityDate } = input;
+  const { ctx, accountId, providerCode, symbol, name, overrideSymbol, buyDate, quantity, unitPrice, maturityDate, spec } = input;
   const instrumentType = maturityDate ? 'BOND' : 'EQUITY';
 
   const activity = await ctx.api.activities.create({
@@ -102,6 +107,11 @@ export async function createCdb(input: CreateCdbInput): Promise<CreateCdbResult>
     };
   }
   await ctx.api.assets.updateProfile(profile);
+
+  // Persist the parametrization (primary source for the wizard's
+  // "aplicação adicional" mode; the provider override is the fallback).
+  // Best effort — the override remains a working fallback.
+  await ctx.api.storage.set(`title-spec:${assetId}`, JSON.stringify(spec)).catch(() => undefined);
 
   // Best effort: price it right away so the position shows immediately.
   await ctx.api.market.sync([assetId], false).catch(() => undefined);

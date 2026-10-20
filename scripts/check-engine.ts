@@ -6,7 +6,7 @@
  * Usage: pnpm exec tsx scripts/check-engine.ts
  */
 import { businessDaysBetween, prevBusinessDay } from '../src/lib/calendar';
-import { postFixedPU, preFixedPU, solveEmission, buildSymbol, type RateMap } from '../src/lib/engine';
+import { postFixedPU, preFixedPU, solveEmission, buildSymbol, parseSymbol, type RateMap, type TitleSpec } from '../src/lib/engine';
 import { parseDecimal } from '../src/lib/decimal';
 
 const TOL = 1e-6;
@@ -168,6 +168,35 @@ if (sym !== 'CDI-104.50-20260713') {
     } else {
       console.log(`PASS  parseDecimal(${JSON.stringify(bad)}) = NaN`);
     }
+  }
+}
+
+// --- Symbol round-trip ---------------------------------------------------
+// The wizard re-derives a title's spec from the override symbol ("aplicação
+// adicional" mode), so buildSymbol/parseSymbol must be exact inverses.
+{
+  const specs: TitleSpec[] = [
+    { kind: 'CDI', ratePct: 103, emission: '2026-08-17' },
+    { kind: 'CDI', ratePct: 98, emission: '2026-03-06' },
+    { kind: 'CDI', ratePct: 104.5, emission: '2026-02-27' },
+    { kind: 'PRE', ratePct: 14.3, emission: '2026-07-13' },
+  ];
+  for (const spec of specs) {
+    const code = buildSymbol(spec);
+    const back = parseSymbol(code);
+    const ok =
+      back !== null &&
+      back.kind === spec.kind &&
+      back.ratePct === spec.ratePct &&
+      back.emission === spec.emission;
+    if (!ok) failures++;
+    console.log(`${ok ? 'PASS' : 'FAIL'}  symbol round-trip ${code}`);
+  }
+  if (parseSymbol('CDB-BANCOX') !== null) {
+    failures++;
+    console.log('FAIL  parseSymbol should reject foreign symbols');
+  } else {
+    console.log('PASS  parseSymbol rejects foreign symbols');
   }
 }
 
